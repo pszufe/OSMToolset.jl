@@ -37,17 +37,27 @@ filename = "delaware-latest.osm.attractiveness.csv"
 
 sindex = SpatIndex(filename);
 
-function attractiveness(sindex::SpatIndex, lattitude::Float64, longitude::Float64)
-    res = Dict(sindex.measures .=> 0.0)
+function attractiveness(sindex::SpatIndex, lattitude::Float64, longitude::Float64;explain::Union{Val{false},Val{true}}=Val{false}())
+    res = Dict(sindex.measures .=> 0.0) 
     enu = ENU(LLA(lattitude,longitude),sindex.refLLA)
     p = SpatialIndexing.Point((enu.east, enu.north))
+    explanation = AttractivenessData[]
     for item in intersects_with(sindex.tree, SpatialIndexing.Rect(p))
         a = item.val
         res[a.class] += round(a.points * OpenStreetMapX.distance(enu, a.enu) / a.range;digits=3)
+        if typeof(explain) <: Val{true}
+            push!(explanation, a)
+        end
     end
-    (;res...)
+    if typeof(explain) <: Val{true}
+        return ((;res...), explanation)
+    else
+        return (;res...)
+    end
 end
 
 
+using BenchmarkTools
+@btime attractiveness(sindex, 39.2996,  -75.6048)
 
-attractiveness(sindex, 39.2996,  -75.6048)
+attractiveness(sindex, 39.2996,  -75.6048; explain=Val{true}())
