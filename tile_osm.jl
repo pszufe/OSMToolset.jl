@@ -178,6 +178,8 @@ function tile_osm_file(filename::AbstractString, bounds::Bounds = getbounds(file
             end
         end
     end
+
+    flush(stdout)
     seekstart(io)
 
     # the first two lines always contain headers
@@ -256,6 +258,14 @@ end
 filename = raw"c:\temp\delaware-latest.osm"
 #filename = raw"c:\temp\la-rioja-latest.osm"
 #filename = raw"c:\temp\iceland-latest.osm"
-@time tile_osm_file(filename;nrow=10,ncol=2);
+
+bounds = getbounds(filename)
+
+boundsR = Bounds(;minlat=floor(bounds.minlat*2; digits=1)/2,minlon=floor(Float64(bounds.minlon)*2; digits=1)/2,
+                  maxlat=ceil(bounds.maxlat*2; digits=1)/2,maxlon=ceil(Float64(bounds.maxlon)*2; digits=1)/2   )
+nrow = round(Int,(boundsR.latwh)*20)
+ncol = round(Int,(boundsR.lonwh)*20)
+
+@time tile_osm_file(filename, boundsR;nrow,ncol);
 #CSV.write(filename*".out.csv", df)
 

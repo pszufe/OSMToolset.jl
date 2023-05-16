@@ -2,13 +2,43 @@ using CSV, EzXML, DataFrames
 using Parsers
 
 
+struct Attract
+    class::String
+    points::Int
+    range::Int
+end
+
+function load_attr_config(filename = "Attractiveness.csv") 
+    dfa = CSV.read(filename, DataFrame,types=Dict(
+        :class => String, :key => String, :points => Int, :range => Int, :values =>String) )
+    dfa.values .= (x->string.(split(x,','))).(dfa.values)
+    dkeys = Set(dfa.key)
+    attract = Dict{Union{String, Tuple{String,String}}, Attract}()
+    for row in eachrow(dfa)
+        a = Attract(row.class, row.points, row.range)
+        for value in row.values
+            if value == "*"
+                attract[row.key] = a
+            else
+                attract[row.key, value] = a
+            end
+        end
+    end
+    (;dkeys, attract)
+end
+
+
 struct Node
     id::Int
     lat::Float64
     lon::Float64
 end
 
-function parse_osm_file(filename)
+# %%
+
+function parse_osm_file(filename;attract_config="Attractiveness.csv")
+    dkeys, attract = load_attr_config(attract_config)
+
     EMPTY_NODE = Node(0,0.,0.)
     nodes =  Dict{Int,Node}()
     ways_firstnode = Dict{Int, Node}()
@@ -91,14 +121,26 @@ function parse_osm_file(filename)
             end
         elseif nname == "tag"            
             attrs = nodeattributes(sr)
-            push!(df, (;elemtype,elemid,nodeid=curnode.id, lat=curnode.lat, lon=curnode.lon, k=string(get(attrs,"k",nothing)), v=string(get(attrs,"v",nothing)) ) )
+            key = string(get(attrs,"k",""))
+            if key in dkeys
+                value = string(get(attrs,"v",""))
+                # get either first key if it was of * type
+                # otherwise try to get attractiveness for the tuple
+                a = get(attract, key, get(attract, (key, value), nothing)) 
+                if !isnothing(a)
+                    # we are interested only in attractive POIs
+                    push!(df, (;elemtype,elemid,nodeid=curnode.id, lat=curnode.lat, lon=curnode.lon, key, value,a.class, a.points, a.range ) )
+                end
+            end
         end
     end
-    df
+    df2 = DataFrame(g[findmax(g.points)[2], :]  for g in  groupby(df, [:nodeid, :class]))
+    df2
 end
 
-filename = "c:\\temp\\delaware-latest.osm"
+filename = raw"c:\temp\delaware-latest.osm"
 
 @time df = parse_osm_file(filename);
 
-CSV.write(filename*".out.csv", df)
+
+CSV.write(filename*".attractiveness.csv", df)
