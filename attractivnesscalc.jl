@@ -9,6 +9,7 @@ struct AttractivenessData
     points::Int
     range::Int
     enu::ENU
+    lla::LLA
 end
 
 struct SpatIndex
@@ -22,10 +23,11 @@ function SpatIndex(filename,
 
     data = SpatialElem[]
     for id in 1:nrow(df)
-        enu = ENU(LLA(df.lat[id], df.lon[id]), refLLA)
+        lla = LLA(df.lat[id], df.lon[id])
+        enu = ENU(lla, refLLA)
         range_ = df.range[id]
         rect = SpatialIndexing.Rect((enu.east-range_,enu.north-range_), (enu.east+range_,enu.north+range_))
-        a = AttractivenessData(Symbol(df.class[id]), df.points[id], df.range[id], enu)
+        a = AttractivenessData(Symbol(df.class[id]), df.points[id], df.range[id], enu, lla)
         push!(data, SpatialElem(rect, id, a))
     end
     tree = RTree{Float64, 2}(Int, AttractivenessData, variant=SpatialIndexing.RTreeStar)
@@ -33,20 +35,18 @@ function SpatIndex(filename,
     SpatIndex(tree, df, refLLA, Symbol.(sort!(unique(df.class))))
 end
 
-filename = "delaware-latest.osm.attractiveness.csv"
-
-sindex = SpatIndex(filename);
 
 function attractiveness(sindex::SpatIndex, lattitude::Float64, longitude::Float64;explain::Union{Val{false},Val{true}}=Val{false}())
     res = Dict(sindex.measures .=> 0.0) 
     enu = ENU(LLA(lattitude,longitude),sindex.refLLA)
     p = SpatialIndexing.Point((enu.east, enu.north))
-    explanation = AttractivenessData[]
+    explanation = DataFrame()
     for item in intersects_with(sindex.tree, SpatialIndexing.Rect(p))
         a = item.val
-        res[a.class] += round(a.points * OpenStreetMapX.distance(enu, a.enu) / a.range;digits=3)
+        poidistance = OpenStreetMapX.distance(enu, a.enu)
+        res[a.class] += round(a.points * poidistance / a.range;digits=3)
         if typeof(explain) <: Val{true}
-            push!(explanation, a)
+            append!(explanation, DataFrame(;a.class,a.points,poidistance,a.lla.lat,a.lla.lon))
         end
     end
     if typeof(explain) <: Val{true}
@@ -55,6 +55,10 @@ function attractiveness(sindex::SpatIndex, lattitude::Float64, longitude::Float6
         return (;res...)
     end
 end
+
+filename = "delaware-latest.osm.attractiveness.csv"
+
+sindex = SpatIndex(filename);
 
 
 using BenchmarkTools
