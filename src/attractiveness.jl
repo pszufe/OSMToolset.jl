@@ -18,9 +18,8 @@ struct SpatIndex
     refLLA::LLA
     measures::Vector{Symbol}
 end
-function SpatIndex(filename, 
-    df = CSV.read(filename, DataFrame), refLLA = LLA(mean(df.lat), mean(df.lon)) )
-
+SpatIndex(filename::AbstractString) = SpatIndex(CSV.read(filename, DataFrame))
+function SpatIndex(df::DataFrame, refLLA::LLA = LLA(mean(df.lat), mean(df.lon)))
     data = SpatialElem[]
     for id in 1:nrow(df)
         lla = LLA(df.lat[id], df.lon[id])
@@ -32,36 +31,35 @@ function SpatIndex(filename,
     end
     tree = RTree{Float64, 2}(Int, AttractivenessData, variant=SpatialIndexing.RTreeStar)
     SpatialIndexing.load!(tree, data)
-    SpatIndex(tree, df, refLLA, Symbol.(sort!(unique(df.class))))
+    return SpatIndex(tree, df, refLLA, Symbol.(sort!(unique(df.class))))
 end
 
 
-function attractiveness(sindex::SpatIndex, lattitude::Float64, longitude::Float64;explain::Union{Val{false},Val{true}}=Val{false}())
-    res = Dict(sindex.measures .=> 0.0) 
-    enu = ENU(LLA(lattitude,longitude),sindex.refLLA)
+function attractiveness(sindex::SpatIndex, latitude::Float64, longitude::Float64; explain::Bool=false)
+    res = Dict(sindex.measures .=> 0.0)
+    enu = ENU(LLA(latitude,longitude),sindex.refLLA)
     p = SpatialIndexing.Point((enu.east, enu.north))
     explanation = DataFrame()
     for item in intersects_with(sindex.tree, SpatialIndexing.Rect(p))
         a = item.val
         poidistance = OpenStreetMapX.distance(enu, a.enu)
         res[a.class] += round(a.points * poidistance / a.range;digits=3)
-        if typeof(explain) <: Val{true}
+        if explain
             append!(explanation, DataFrame(;a.class,a.points,poidistance,a.lla.lat,a.lla.lon))
         end
     end
-    if typeof(explain) <: Val{true}
+    if explain
         return ((;res...), explanation)
     else
         return (;res...)
     end
 end
 
-filename = "delaware-latest.osm.attractiveness.csv"
-
+#=
 sindex = SpatIndex(filename);
-
 
 using BenchmarkTools
 @btime attractiveness(sindex, 39.2996,  -75.6048)
 
 attractiveness(sindex, 39.2996,  -75.6048; explain=Val{true}())
+=#

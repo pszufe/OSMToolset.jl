@@ -1,6 +1,6 @@
 using CSV, EzXML, DataFrames
 using Parsers
-
+import OpenStreetMapX: OSMData
 
 struct Attract
     class::String
@@ -8,7 +8,9 @@ struct Attract
     range::Int
 end
 
-function load_attr_config(filename = "Attractiveness.csv") 
+const builtin_attract_path = joinpath(@__DIR__, "..", "Attractiveness.csv")
+
+function load_attr_config(filename::AbstractString = builtin_attract_path)
     dfa = CSV.read(filename, DataFrame,types=Dict(
         :class => String, :key => String, :points => Int, :range => Int, :values =>String) )
     dfa.values .= (x->string.(split(x,','))).(dfa.values)
@@ -27,16 +29,9 @@ function load_attr_config(filename = "Attractiveness.csv")
     (;dkeys, attract)
 end
 
-
-struct Node
-    id::Int
-    lat::Float64
-    lon::Float64
-end
-
 # %%
 
-function parse_osm_file(filename;attract_config="Attractiveness.csv")
+function find_poi(filename::AbstractString; attract_config=builtin_attract_path)
     dkeys, attract = load_attr_config(attract_config)
 
     EMPTY_NODE = Node(0,0.,0.)
@@ -75,13 +70,13 @@ function parse_osm_file(filename;attract_config="Attractiveness.csv")
                 waylookforfirstnd = true
             else
                 @warn "<way> $nname, $i, no attribs?"
-            end            
-        elseif waylookforfirstnd && nname == "nd" 
+            end
+        elseif waylookforfirstnd && nname == "nd"
             if hasnodeattributes(sr)
                 attrs = nodeattributes(sr)
                 curnode = nodes[parse(Int, attrs["ref"])]
                 ways_firstnode[elemid] = curnode
-                waylookforfirstnd = false                
+                waylookforfirstnd = false
             else
                 @warn "<way>/<nd> $nname, $i, no attribs?"
             end
@@ -95,8 +90,8 @@ function parse_osm_file(filename;attract_config="Attractiveness.csv")
                 relationlookforfirstmember = true
             else
                 @warn "<relation> $nname, $i, no attribs?"
-            end 
-        elseif relationlookforfirstmember && nname == "member" 
+            end
+        elseif relationlookforfirstmember && nname == "member"
             if hasnodeattributes(sr)
                 attrs = nodeattributes(sr)
                 membertype = attrs["type"]
@@ -115,18 +110,18 @@ function parse_osm_file(filename;attract_config="Attractiveness.csv")
                     @warn "<relation> , $i, Unsupported member type: $nname"
                 end
                 relations_firstnode[elemid] = curnode
-                relationlookforfirstmember = false                
+                relationlookforfirstmember = false
             else
                 @warn "<relation>/<member> $nname, $i, no attribs?"
             end
-        elseif nname == "tag"            
+        elseif nname == "tag"
             attrs = nodeattributes(sr)
             key = string(get(attrs,"k",""))
             if key in dkeys
                 value = string(get(attrs,"v",""))
                 # get either first key if it was of * type
                 # otherwise try to get attractiveness for the tuple
-                a = get(attract, key, get(attract, (key, value), nothing)) 
+                a = get(attract, key, get(attract, (key, value), nothing))
                 if !isnothing(a)
                     # we are interested only in attractive POIs
                     push!(df, (;elemtype,elemid,nodeid=curnode.id, lat=curnode.lat, lon=curnode.lon, key, value,a.class, a.points, a.range ) )
@@ -138,9 +133,33 @@ function parse_osm_file(filename;attract_config="Attractiveness.csv")
     df2
 end
 
+#=
 filename = raw"c:\temp\delaware-latest.osm"
 
 @time df = parse_osm_file(filename);
 
-
 CSV.write(filename*".attractiveness.csv", df)
+=#
+
+function find_poi(osm::OSMData; attract_config=builtin_attract_path)
+    if attract_config isa String
+        dkeys, attract = load_attr_config(attract_config)
+    else
+        dkeys, attract = attract_config
+    end
+
+    df = DataFrame()
+    for (node, (key, value)) in osm.features
+        # get either first key if it was of * type
+        # otherwise try to get attractiveness for the tuple
+        a = get(attract, key, get(attract, (key, value), nothing))
+        if a !== nothing
+            # we are interested only in attractive POIs
+            #push!(df, (;elemtype, elemid, nodeid=curnode.id, lat=curnode.lat, lon=curnode.lon, key, value, a.class, a.points, a.range))
+            lla = osm.nodes[node]
+            push!(df, (;nodeid=node, lat=lla.lat, lon=lla.lon, key, value, a.class, a.points, a.range))
+        end
+    end
+    df2 = DataFrame(g[findmax(g.points)[2], :] for g in groupby(df, [:nodeid, :class]))
+    return df2
+end

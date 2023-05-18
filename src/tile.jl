@@ -1,13 +1,6 @@
 using CSV, EzXML, DataFrames
 using Parsers, Parameters
 
-# this is representation of the node (all nodes need to be stored in memory in this format)
-struct Node
-    id::Int
-    lat::Float64
-    lon::Float64
-end
-
 
 
 function gettag(line)
@@ -261,6 +254,7 @@ function tile_osm_file(filename::AbstractString, bounds::Bounds = getbounds(file
     close(io)
 end
 
+#=
 filename = ARGS[1]
 out_dir = length(ARGS) == 2 ? ARGS[2] : dirname(filename)
 bounds = getbounds(filename)
@@ -269,3 +263,4 @@ boundsR = Bounds(;minlat=floor(bounds.minlat*2; digits=1)/2,minlon=floor(Float64
 nrow = round(Int,(boundsR.latwh)*10)
 ncol = round(Int,(boundsR.lonwh)*10)
 @time tile_osm_file(filename; nrow, ncol, out_dir)
+=#
