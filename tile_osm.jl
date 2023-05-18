@@ -40,7 +40,7 @@ end
     This is a special type representing geographic longitude as the values may wrap around
 """
 primitive type FloatLon <: AbstractFloat 64 end
-function FloatLon(x::Float64) 
+function FloatLon(x::Float64)
     if abs(x) > 360
         x = x % 360
     end
@@ -55,9 +55,9 @@ FloatLon(x::Integer) = FloatLon(Float64(x))
 Float64(x::FloatLon) = reinterpret(Float64, x)
 Base.show(io::IO, x::FloatLon) = Base.show(io, Float64(x))
 import Base: +,-
-+(a::FloatLon, b::Real)  = FloatLon(Float64(a)+b)
++(a::FloatLon, b::Real) = FloatLon(Float64(a)+b)
 +(a::Real, b::FloatLon) = FloatLon(a+Float64(b))
--(a::FloatLon, b::FloatLon)  = Float64(a) < Float64(b) ? 360 - (Float64(b)-Float64(a)) : Float64(a)-Float64(b)  
+-(a::FloatLon, b::FloatLon)  = Float64(a) < Float64(b) ? 360 - (Float64(b)-Float64(a)) : Float64(a)-Float64(b)
 
 
 """
@@ -126,12 +126,12 @@ end
 function gettiles(node::Node, boundstiles::BoundsTiles, nodesnn::Dict{Int, Set{Node}})
     unique!([gettile(boundstiles, n.lat, n.lon) for n in [node;collect(get(nodesnn,node.id,Node[]))]])
 end
-function tile_osm_file(filename::AbstractString, bounds::Bounds = getbounds(filename); nrow::Integer=2, ncol::Integer=3)
+function tile_osm_file(filename::AbstractString, bounds::Bounds = getbounds(filename); nrow::Integer=2, ncol::Integer=3, out_dir::String=dirname(filename))
     #dictionary containing neighbours for each node
     nodesnn = Dict{Int, Set{Node}}()
-    #dictionary of tiles for ways 
+    #dictionary of tiles for ways
     waystiles = Dict{Int, Vector{Tuple{Int,Int}}}()
-    #dictionary of tiles for relations 
+    #dictionary of tiles for relations
     relationstiles = Dict{Int, Vector{Tuple{Int,Int}}}()
 
     io = open(filename, "r")
@@ -141,13 +141,19 @@ function tile_osm_file(filename::AbstractString, bounds::Bounds = getbounds(file
     if endswith(lowercase(fname), ".osm")
         fname = fname[1:end-4]
     end
-    iotiles = [ open(joinpath(dirname(filename), "$(fname)_$(lpad(row,4,'0'))_$(lpad(col,4,'0')).osm"),"w") for row in 1:nrow, col in 1:ncol]
+    mkpath(joinpath(out_dir))
+    boundstiles = BoundsTiles(;bounds, nrow, ncol)
+    iotiles = Matrix{IOStream}(undef, nrow, ncol)
+    for row in 1:nrow, col in 1:ncol
+        tile_bounds = boundstiles.tiles[row,col]
+        tile_fname = "$(tile_bounds.minlat)_$(tile_bounds.maxlat)_$(tile_bounds.minlon)_$(tile_bounds.maxlon).osm"
+        iotiles[row,col] = open(joinpath(out_dir, tile_fname), "w")
+    end
     # Buffers for each output
     # We first write to buffer since it is not known if there is anything to write out
     buftiles = [IOBuffer() for row in 1:nrow, col in 1:ncol]
 
-    boundstiles = BoundsTiles(;bounds, nrow, ncol)
-    nodesDict =  Dict{Int,Node}()
+    nodesDict = Dict{Int,Node}()
     seekstart(io)
     sr = EzXML.StreamReader(io)
     i = 0
@@ -163,8 +169,8 @@ function tile_osm_file(filename::AbstractString, bounds::Bounds = getbounds(file
             nodesDict[id] = Node(id, parse(Float64,attrs["lat"]), parse(Float64,attrs["lon"]))
         end
         if nname == "way"
-            lastnode =    EMPTY_NODE     
-        elseif nname == "nd" 
+            lastnode = EMPTY_NODE
+        elseif nname == "nd"
             if hasnodeattributes(sr)
                 attrs = nodeattributes(sr)
                 node = nodesDict[parse(Int, attrs["ref"])]
@@ -191,7 +197,7 @@ function tile_osm_file(filename::AbstractString, bounds::Bounds = getbounds(file
     i = 0
     curtileset = Vector{Tuple{Int,Int}}()
 
-    while !eof(io) 
+    while !eof(io)
         line = readline(io)
         type, subtype, id = gettag(line)
         if type == :node
@@ -206,7 +212,7 @@ function tile_osm_file(filename::AbstractString, bounds::Bounds = getbounds(file
                 if type==:nd
                     tils = gettiles(nodesDict[id],boundstiles,nodesnn)
                     push!.(Ref(buftilesWrite), tils)
-                    println.(getindex.(Ref(buftiles), first.(tils), last.(tils)) , Ref(line))        
+                    println.(getindex.(Ref(buftiles), first.(tils), last.(tils)) , Ref(line))
                 else
                     println.(buftiles, Ref(line))
                 end
@@ -232,10 +238,10 @@ function tile_osm_file(filename::AbstractString, bounds::Bounds = getbounds(file
                     elseif  subtype == :way
                         tils = get(waystiles, id, Tuple{Int,Int}[])
                     elseif  subtype == :relation
-                        tils = get(relationstiles, id, Tuple{Int,Int}[]) 
-                    end                        
+                        tils = get(relationstiles, id, Tuple{Int,Int}[])
+                    end
                     push!.(Ref(buftilesWrite), tils)
-                    println.(getindex.(Ref(buftiles), first.(tils), last.(tils)) , Ref(line))        
+                    println.(getindex.(Ref(buftiles), first.(tils), last.(tils)) , Ref(line))
                 else
                     println.(buftiles, Ref(line))
                 end
@@ -255,17 +261,11 @@ function tile_osm_file(filename::AbstractString, bounds::Bounds = getbounds(file
     close(io)
 end
 
-filename = raw"c:\temp\delaware-latest.osm"
-#filename = raw"c:\temp\la-rioja-latest.osm"
-#filename = raw"c:\temp\iceland-latest.osm"
-
+filename = ARGS[1]
+out_dir = length(ARGS) == 2 ? ARGS[2] : dirname(filename)
 bounds = getbounds(filename)
-
 boundsR = Bounds(;minlat=floor(bounds.minlat*2; digits=1)/2,minlon=floor(Float64(bounds.minlon)*2; digits=1)/2,
-                  maxlat=ceil(bounds.maxlat*2; digits=1)/2,maxlon=ceil(Float64(bounds.maxlon)*2; digits=1)/2   )
-nrow = round(Int,(boundsR.latwh)*20)
-ncol = round(Int,(boundsR.lonwh)*20)
-
-@time tile_osm_file(filename, boundsR;nrow,ncol);
-#CSV.write(filename*".out.csv", df)
-
+                  maxlat=ceil(bounds.maxlat*2; digits=1)/2,maxlon=ceil(Float64(bounds.maxlon)*2; digits=1)/2)
+nrow = round(Int,(boundsR.latwh)*10)
+ncol = round(Int,(boundsR.lonwh)*10)
+@time tile_osm_file(filename; nrow, ncol, out_dir)
