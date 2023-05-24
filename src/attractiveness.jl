@@ -50,16 +50,37 @@ function AttractivenessSpatIndex(df::AbstractDataFrame, refLLA::LLA = LLA(mean(d
     return AttractivenessSpatIndex(tree, df, refLLA, Symbol.(sort!(unique(df.class))))
 end
 
+"""
+    attractiveness(sindex::AttractivenessSpatIndex, latitude::Float64, longitude::Float64; explain::Bool=false)
 
+Returns the multidimensional attractiveness measure
+for the given spatial index `sindex` and `lattitude` and `longitude`
+If `explain` is set to true the result will additionally contain details 
+about objects used to calculate the attractiveness
+"""
 function attractiveness(sindex::AttractivenessSpatIndex, latitude::Float64, longitude::Float64; explain::Bool=false)
-    res = Dict(sindex.measures .=> 0.0)
     enu = ENU(LLA(latitude,longitude),sindex.refLLA)
+    attractiveness(sindex, enu;explain = explain)
+end
+
+"""
+    attractiveness(sindex::AttractivenessSpatIndex, enu::ENU; explain::Bool=false)
+
+Returns the multidimensional attractiveness measure
+for the given spatial index `sindex` and `enu` cooridanates.
+Note that the enu coordinates *must* use `sindex.refLLA` as the reference point.
+If `explain` is set to true the result will additionally contain details 
+about objects used to calculate the attractiveness
+"""
+function attractiveness(sindex::AttractivenessSpatIndex, enu::ENU; explain::Bool=false)
+    res = Dict(sindex.measures .=> 0.0)
     p = SpatialIndexing.Point((enu.east, enu.north))
     explanation = DataFrame()
     for item in intersects_with(sindex.tree, SpatialIndexing.Rect(p))
-        a = item.val
+        a = item.val  # typeof(a) === AttractivenessData
         poidistance = OpenStreetMapX.distance(enu, a.enu)
-        res[a.class] += round(a.points * poidistance / a.range;digits=3)
+        poidistance > a.range && continue
+        res[a.class] += a.points * (a.range - poidistance) / a.range
         if explain
             append!(explanation, DataFrame(;a.class,a.points,poidistance,a.lla.lat,a.lla.lon))
         end

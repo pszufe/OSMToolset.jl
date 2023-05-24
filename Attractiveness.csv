@@ -12,8 +12,10 @@ parking	amenity	5	250	parking
 parking	parking	5	250	*
 transport	amenity	5	300	bus_station
 transport	public_transport	5	300	station
-transport	railway	10	500	station
+transport	railway	10	700	station
 transport	aeroway	15	1000	aerodrome,terminal
+transport	public_transport	5	300	stop_position
+transport	railway	5	300	tram_stop
 healthcare	amenity	10	500	clinic,doctors,dentist
 healthcare	healthcare	10	500	*
 healthcare	amenity	5	500	pharmacy
