@@ -12,14 +12,30 @@ struct AttractivenessData
     lla::LLA
 end
 
-struct SpatIndex
+struct AttractivenessSpatIndex
     tree::RTree{Float64, 2, SpatialElem{Float64, 2, Int64, AttractivenessData}}
     df::DataFrame
     refLLA::LLA
     measures::Vector{Symbol}
 end
-SpatIndex(filename::AbstractString) = SpatIndex(CSV.read(filename, DataFrame))
-function SpatIndex(df::DataFrame, refLLA::LLA = LLA(mean(df.lat), mean(df.lon)))
+"""
+    AttractivenessSpatIndex(filename::AbstractString)
+    AttractivenessSpatIndex(df::AbstractDataFrame)
+
+Builds an attractivness spatial index basing on data in some CSV file o a DataFrame
+
+The CSV file or DataFrame should have the following columns:
+    - class - data class in attractiveness index, each class name creates attractiveness dimension
+    - key - key in the XML file <tag>
+    - values - values in the <tag> (a star `"*"` catches all values)
+    - points - number of influance points 
+    - range - maximum influence range in meters 
+
+When a `DataFrame` is provided the additional parameter `refLLA` can be provided for the reference 
+`LLA` coordinates in the spatial index. The spatial index works in the ENU coordinate system.
+"""
+AttractivenessSpatIndex(filename::AbstractString) = AttractivenessSpatIndex(CSV.read(filename, DataFrame))
+function AttractivenessSpatIndex(df::AbstractDataFrame, refLLA::LLA = LLA(mean(df.lat), mean(df.lon)))
     data = SpatialElem[]
     for id in 1:nrow(df)
         lla = LLA(df.lat[id], df.lon[id])
@@ -31,11 +47,11 @@ function SpatIndex(df::DataFrame, refLLA::LLA = LLA(mean(df.lat), mean(df.lon)))
     end
     tree = RTree{Float64, 2}(Int, AttractivenessData, variant=SpatialIndexing.RTreeStar)
     SpatialIndexing.load!(tree, data)
-    return SpatIndex(tree, df, refLLA, Symbol.(sort!(unique(df.class))))
+    return AttractivenessSpatIndex(tree, df, refLLA, Symbol.(sort!(unique(df.class))))
 end
 
 
-function attractiveness(sindex::SpatIndex, latitude::Float64, longitude::Float64; explain::Bool=false)
+function attractiveness(sindex::AttractivenessSpatIndex, latitude::Float64, longitude::Float64; explain::Bool=false)
     res = Dict(sindex.measures .=> 0.0)
     enu = ENU(LLA(latitude,longitude),sindex.refLLA)
     p = SpatialIndexing.Point((enu.east, enu.north))
@@ -56,7 +72,7 @@ function attractiveness(sindex::SpatIndex, latitude::Float64, longitude::Float64
 end
 
 #=
-sindex = SpatIndex(filename);
+sindex = AttractivenessSpatIndex(filename);
 
 using BenchmarkTools
 @btime attractiveness(sindex, 39.2996,  -75.6048)

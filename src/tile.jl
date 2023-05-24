@@ -30,7 +30,7 @@ function gettag(line)
 end
 
 """
-    This is a special type representing geographic longitude as the values may wrap around
+    This is an AbstractFloat type representing geographic longitude as the values may wrap around
 """
 primitive type FloatLon <: AbstractFloat 64 end
 function FloatLon(x::Float64)
@@ -119,34 +119,76 @@ end
 function gettiles(node::Node, boundstiles::BoundsTiles, nodesnn::Dict{Int, Set{Node}})
     unique!([gettile(boundstiles, n.lat, n.lon) for n in [node;collect(get(nodesnn,node.id,Node[]))]])
 end
+
+"""
+    calc_tiling(bounds::Bounds, latTileSize::Float64, lonTileSize::Float64)
+Calculates recommended bounds, number of rows and columns for a given
+`bounds` and size of tile `latTileSize` x `lonTileSize`.
+"""
+function calc_tiling(bounds::Bounds, latTileSize::Float64, lonTileSize::Float64)
+    boundsR = Bounds(;minlat=floor(bounds.minlat/latTileSize)*latTileSize,minlon=floor(Float64(bounds.minlon)/lonTileSize)*lonTileSize,
+                maxlat=ceil(bounds.maxlat/latTileSize)*latTileSize,maxlon=ceil(Float64(bounds.maxlon)/lonTileSize)*lonTileSize   )
+    nrow = round(Int,(boundsR.latwh)*(1/latTileSize))
+    ncol = round(Int,(boundsR.lonwh)*1/lonTileSize)
+    (;bounds = boundsR, nrow, ncol)
+end
+
+
+"""
+    calc_tiling(filename::AbstractString, latTileSize::Float64, lonTileSize::Float64)
+Calculates recommended bounds, number of rows and columns for a given
+`filename` and size of tile `latTileSize` x `lonTileSize`.
+"""
+function calc_tiling(filename::AbstractString, latTileSize::Float64, lonTileSize::Float64)
+    calc_tiling(getbounds(filename), latTileSize, lonTileSize)
+end
+
+
+function tile_osm_file(filename::AbstractString, latTileSize::Float64, lonTileSize::Float64, bounds::Bounds = getbounds(filename); out_dir::String=dirname(filename))
+    params = calc_tiling(bounds, latTileSize,lonTileSize)
+    tile_osm_file(filename,params.bounds;nrow=params.nrow, ncol=params.ncol, out_dir=out_dir)
+end
+
+"""
+    tile_osm_file(filename::AbstractString, [bounds::Bounds]; nrow::Integer, ncol::Integer, [out_dir::AbstractString]
+
+Provide the tiling functionality for maps.
+A `filename` will be open for processing and the tiling will be done around given `bounds`.
+If `bounds` are not given they will be calculated using `getbounds` function.
+The tiling will be performed with a matrix having `nrow` rows and `ncol` columns.
+The output will be written to the folder name `out_dir`.  
+If none `out_dir` is given than as the output is written to where `filename` is located.
+"""
 function tile_osm_file(filename::AbstractString, bounds::Bounds = getbounds(filename); nrow::Integer=2, ncol::Integer=3, out_dir::String=dirname(filename))
-    #dictionary containing neighbours for each node
-    nodesnn = Dict{Int, Set{Node}}()
     #dictionary of tiles for ways
     waystiles = Dict{Int, Vector{Tuple{Int,Int}}}()
     #dictionary of tiles for relations
     relationstiles = Dict{Int, Vector{Tuple{Int,Int}}}()
 
     io = open(filename, "r")
-
-
     fname = basename(filename)
     if endswith(lowercase(fname), ".osm")
         fname = fname[1:end-4]
     end
     mkpath(joinpath(out_dir))
     boundstiles = BoundsTiles(;bounds, nrow, ncol)
-    iotiles = Matrix{IOStream}(undef, nrow, ncol)
-    for row in 1:nrow, col in 1:ncol
-        tile_bounds = boundstiles.tiles[row,col]
-        tile_fname = "$(tile_bounds.minlat)_$(tile_bounds.maxlat)_$(tile_bounds.minlon)_$(tile_bounds.maxlon).osm"
-        iotiles[row,col] = open(joinpath(out_dir, tile_fname), "w")
-    end
-    # Buffers for each output
-    # We first write to buffer since it is not known if there is anything to write out
-    buftiles = [IOBuffer() for row in 1:nrow, col in 1:ncol]
-
+ 
+    # maps nodeids to Node structs
     nodesDict = Dict{Int,Node}()
+
+    # dictionary containing a Set of neighbours for each node
+    nodesnn = Dict{Int, Set{Node}}()
+
+
+    """
+    1st File pass: Build a dictionary of nodes (1st file pass)
+    a) find all <node/> tags end extract lattitude and longitute for each node
+     b) navigate through all <way> tags and for each <nd> tag adjust node negihbours.
+    In the result of step 1 we have two objects:
+     - nodesDict that maps nodeids to Node structs
+     - nodesnn that for each node has a Set of his neighbours
+    """
+    
     seekstart(io)
     sr = EzXML.StreamReader(io)
     i = 0
@@ -179,6 +221,36 @@ function tile_osm_file(filename::AbstractString, bounds::Bounds = getbounds(file
     end
 
     flush(stdout)
+
+    """
+    2nd File pass. Perform the tiling 
+     This code reads line by line rather than using EzXML because 
+     I did not find a method in EzXML to write back XML elements in a convenient way. /TODO/
+     Each line is cheked whether it is a <node> or <way> or <relation>
+     a) If a line is a node than gettiles is called. Gettiles finds all tiles for a file on the base 
+        of coordinates of the file and all this neighbours.
+     b) If a line is a way we started line by line writing it to buffers for all tiles.
+        Each <nd> line is checked for gettiles destination and is written to the appropiate tiles
+        If a </way> is found the check for all tile buffer is performed. Those buffers that did not 
+        have a single <nd> line are discarded.
+        The non-discarded buffers are written to appropiate files.
+     c) Similarly such as ways the relations are processed. They are also checked for the dependence 
+        of ways (as relations can reference both nodes and ways)"
+    """
+    
+
+    iotiles = Matrix{IOStream}(undef, nrow, ncol)
+    for row in 1:nrow, col in 1:ncol
+        tile_bounds = boundstiles.tiles[row,col]
+        tile_fname = "$(tile_bounds.minlat)_$(tile_bounds.maxlat)_$(tile_bounds.minlon)_$(tile_bounds.maxlon).osm"
+        iotiles[row,col] = open(joinpath(out_dir, tile_fname), "w")
+    end
+
+    # Buffers for each output
+    # We first write to buffer since it is not known if there is anything to write out
+    buftiles = [IOBuffer() for row in 1:nrow, col in 1:ncol]
+
+    #go again to the beginning of the file
     seekstart(io)
 
     # the first two lines always contain headers
@@ -254,13 +326,3 @@ function tile_osm_file(filename::AbstractString, bounds::Bounds = getbounds(file
     close(io)
 end
 
-#=
-filename = ARGS[1]
-out_dir = length(ARGS) == 2 ? ARGS[2] : dirname(filename)
-bounds = getbounds(filename)
-boundsR = Bounds(;minlat=floor(bounds.minlat*2; digits=1)/2,minlon=floor(Float64(bounds.minlon)*2; digits=1)/2,
-                  maxlat=ceil(bounds.maxlat*2; digits=1)/2,maxlon=ceil(Float64(bounds.maxlon)*2; digits=1)/2)
-nrow = round(Int,(boundsR.latwh)*10)
-ncol = round(Int,(boundsR.lonwh)*10)
-@time tile_osm_file(filename; nrow, ncol, out_dir)
-=#

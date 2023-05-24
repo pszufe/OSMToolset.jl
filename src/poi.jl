@@ -31,6 +31,16 @@ end
 
 # %%
 
+"""
+    find_poi(filename::AbstractString; attract_config=builtin_attract_path)
+
+Generates a `DataFrame` with points of interests and their attractivenss from a given XML `filename`.
+
+This `DataFrame` can be later used with `AttractivenessSpatIndex` to build an attractivenss spatial index.
+
+The attractiveness values for the index will be used ones from the `attract_config` file.
+By default `builtin_attract_path` will be used but you can define your own index.
+"""
 function find_poi(filename::AbstractString; attract_config=builtin_attract_path)
     dkeys, attract = load_attr_config(attract_config)
 
