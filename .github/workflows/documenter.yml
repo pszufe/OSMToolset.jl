@@ -4,6 +4,7 @@ on:
     branches:
       - main
       - master
+      - JM_POI # 2B deleted
     tags: '*'
   pull_request:
 jobs:
