@@ -1,25 +1,34 @@
-using OSMToolset
 using Documenter
+using Pkg
 
+try
+    using OSMToolset
+catch
+    if !("../src/" in LOAD_PATH)
+       push!(LOAD_PATH,"../src/")
+       @info "Added \"../src/\"to the path: $LOAD_PATH "
+       using OSMToolset
+    end
+end
 DocMeta.setdocmeta!(OSMToolset, :DocTestSetup, :(using OSMToolset); recursive=true)
 
-makedocs(;
-    modules=[OSMToolset],
-    authors="pszufe <pszufe@gmail.com> and contributors",
-    repo="https://github.com/pszufe/OSMToolset.jl/blob/{commit}{path}#{line}",
-    sitename="OSMToolset.jl",
-    format=Documenter.HTML(;
-        prettyurls=get(ENV, "CI", "false") == "true",
+
+makedocs(
+    modules = [OSMToolset],
+    sitename = "OSMToolset.jl",
+    format = format = Documenter.HTML(;
+        prettyurls = get(ENV, "CI", nothing) == "true",
         canonical="https://pszufe.github.io/OSMToolset.jl",
         edit_link="master",
         assets=String[],
     ),
-    pages=[
-        "Home" => "index.md",
-    ],
+    pages = ["Home" => "index.md", "Reference" => "reference.md"],
+    doctest = true
 )
 
-deploydocs(;
+
+deploydocs(
     repo="github.com/pszufe/OSMToolset.jl",
     devbranch="master",
+    target="build"
 )

@@ -2,9 +2,15 @@
 CurrentModule = OSMToolset
 ```
 
-# OSMToolset
+# OSMToolset.jl
 
-Documentation for [OSMToolset](https://github.com/pszufe/OSMToolset.jl).
+Documentation for OSMToolset.jl
+
+For details please go to the [Reference](https://pszufe.github.io/OSMToolset.jl/latest/reference/) section.
+
+Package features
+----------------
+
 
 ```@index
 ```
