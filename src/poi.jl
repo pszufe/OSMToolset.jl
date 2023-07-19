@@ -13,7 +13,7 @@ const builtin_attract_path = joinpath(@__DIR__, "..", "Attractiveness.csv")
 function load_attr_config(filename::AbstractString = builtin_attract_path)
     dfa = CSV.read(filename, DataFrame,types=Dict(
         :class => String, :key => String, :points => Int, :range => Int, :values =>String) )
-    dfa.values .= (x->string.(split(x,','))).(dfa.values)
+    dfa.values = (x->string.(split(x,','))).(dfa.values)
     dkeys = Set(dfa.key)
     attract = Dict{Union{String, Tuple{String,String}}, Attract}()
     for row in eachrow(dfa)
