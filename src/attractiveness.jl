@@ -1,6 +1,4 @@
-using OpenStreetMapX # needed only for conversion between LLA and ENU coordinate systems
-using CSV, DataFrames, SpatialIndexing
-using StatsBase
+
 
 
 
@@ -91,12 +89,3 @@ function attractiveness(sindex::AttractivenessSpatIndex, enu::ENU; explain::Bool
         return (;res...)
     end
 end
-
-#=
-sindex = AttractivenessSpatIndex(filename);
-
-using BenchmarkTools
-@btime attractiveness(sindex, 39.2996,  -75.6048)
-
-attractiveness(sindex, 39.2996,  -75.6048; explain=Val{true}())
-=#

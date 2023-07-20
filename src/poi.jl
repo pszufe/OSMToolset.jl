@@ -1,6 +1,4 @@
-using CSV, EzXML, DataFrames
-using Parsers
-import OpenStreetMapX: OSMData
+
 
 struct Attract
     class::String
@@ -8,9 +6,14 @@ struct Attract
     range::Int
 end
 
-const builtin_attract_path = joinpath(@__DIR__, "..", "Attractiveness.csv")
+struct AttractivenessConfig 
+    dkeys::Set{String}
+    attract::Dict{Union{String, Tuple{String,String}}, Attract}
+end
 
-function load_attr_config(filename::AbstractString = builtin_attract_path)
+const __builtin_attract_path = joinpath(@__DIR__, "..", "config", "Attractiveness.csv")
+
+function AttractivenessConfig(filename::AbstractString = __builtin_attract_path)
     dfa = CSV.read(filename, DataFrame,types=Dict(
         :class => String, :key => String, :points => Int, :range => Int, :values =>String) )
     dfa.values = (x->string.(split(x,','))).(dfa.values)
@@ -26,10 +29,10 @@ function load_attr_config(filename::AbstractString = builtin_attract_path)
             end
         end
     end
-    (;dkeys, attract)
+    AttractivenessConfig(dkeys, attract)
 end
 
-# %%
+const __builtin_attract = AttractivenessConfig()
 
 """
     find_poi(filename::AbstractString; attract_config=builtin_attract_path)
@@ -41,8 +44,9 @@ This `DataFrame` can be later used with `AttractivenessSpatIndex` to build an at
 The attractiveness values for the index will be used ones from the `attract_config` file.
 By default `builtin_attract_path` will be used but you can define your own index.
 """
-function find_poi(filename::AbstractString; attract_config=builtin_attract_path)
-    dkeys, attract = load_attr_config(attract_config)
+function find_poi(filename::AbstractString; attract_config::AttractivenessConfig=__builtin_attract)
+    dkeys = attract_config.dkeys
+    attract = attract_config.attract
 
     EMPTY_NODE = Node(0,0.,0.)
     nodes =  Dict{Int,Node}()
@@ -143,20 +147,10 @@ function find_poi(filename::AbstractString; attract_config=builtin_attract_path)
     df2
 end
 
-#=
-filename = raw"c:\temp\delaware-latest.osm"
 
-@time df = parse_osm_file(filename);
-
-CSV.write(filename*".attractiveness.csv", df)
-=#
-
-function find_poi(osm::OSMData; attract_config=builtin_attract_path)
-    if attract_config isa String
-        dkeys, attract = load_attr_config(attract_config)
-    else
-        dkeys, attract = attract_config
-    end
+function find_poi(osm::OSMData; attract_config::AttractivenessConfig=__builtin_attract)
+    dkeys = attract_config.dkeys
+    attract = attract_config.attract
 
     df = DataFrame()
     for (node, (key, value)) in osm.features
@@ -164,8 +158,7 @@ function find_poi(osm::OSMData; attract_config=builtin_attract_path)
         # otherwise try to get attractiveness for the tuple
         a = get(attract, key, get(attract, (key, value), nothing))
         if a !== nothing
-            # we are interested only in attractive POIs
-            #push!(df, (;elemtype, elemid, nodeid=curnode.id, lat=curnode.lat, lon=curnode.lon, key, value, a.class, a.points, a.range))
+            # we are interested only in attractive POIs            #push!(df, (;elemtype, elemid, nodeid=curnode.id, lat=curnode.lat, lon=curnode.lon, key, value, a.class, a.points, a.range))
             lla = osm.nodes[node]
             push!(df, (;nodeid=node, lat=lla.lat, lon=lla.lon, key, value, a.class, a.points, a.range))
         end
