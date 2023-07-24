@@ -30,7 +30,7 @@ makedocs(
 
 deploydocs(
     repo="github.com/pszufe/OSMToolset.jl",
-    devbranch="master",
+    devbranch = "main",
     target="build"
 )
 
