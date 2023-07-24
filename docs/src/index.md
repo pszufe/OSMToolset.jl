@@ -12,9 +12,7 @@ Package features
 ----------------
 
 
-```@index
+```
+@index
 ```
 
-```@autodocs
-Modules = [OSMToolset]
-```

@@ -35,7 +35,7 @@ end
 const __builtin_attract = AttractivenessConfig()
 
 """
-    find_poi(filename::AbstractString; attract_config=builtin_attract_path)
+    find_poi(filename::AbstractString; attract_config::AttractivenessConfig=__builtin_attract)
 
 Generates a `DataFrame` with points of interests and their attractivenss from a given XML `filename`.
 
