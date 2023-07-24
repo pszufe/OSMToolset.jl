@@ -19,8 +19,8 @@ makedocs(
     sitename = "OSMToolset.jl",
     format = format = Documenter.HTML(;
         prettyurls = get(ENV, "CI", nothing) == "true",
-        canonical="https://pszufe.github.io/OSMToolset.jl",
-        edit_link="master",
+        canonical="https://pszufe.github.io/OSMToolset.jl/stable/",
+        edit_link="main",
         assets=String[],
     ),
     pages = ["Home" => "index.md", "Reference" => "reference.md"],
@@ -29,7 +29,7 @@ makedocs(
 
 
 deploydocs(
-    repo="github.com/pszufe/OSMToolset.jl",
+    repo="github.com/pszufe/OSMToolset.jl.git",
     devbranch = "main",
     target="build"
 )
