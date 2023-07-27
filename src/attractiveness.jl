@@ -62,15 +62,17 @@ function attractiveness(sindex::AttractivenessSpatIndex, latitude::Float64, long
 end
 
 """
-    attractiveness(sindex::AttractivenessSpatIndex, enu::ENU; explain::Bool=false)
+    attractiveness(sindex::AttractivenessSpatIndex, enu::ENU, aggregator::Function=+; explain::Bool=false)
 
 Returns the multidimensional attractiveness measure
 for the given spatial index `sindex` and `enu` cooridanates.
 Note that the enu coordinates *must* use `sindex.refLLA` as the reference point.
 If `explain` is set to true the result will additionally contain details 
-about objects used to calculate the attractiveness
+about objects used to calculate the attractiveness.
+
+Attractiveness will be aggregagated in a way defined by the `aggregator` paramterr
 """
-function attractiveness(sindex::AttractivenessSpatIndex, enu::ENU; explain::Bool=false)
+function attractiveness(sindex::AttractivenessSpatIndex, enu::ENU, aggregator::Function=+; explain::Bool=false)
     res = Dict(sindex.measures .=> 0.0)
     p = SpatialIndexing.Point((enu.east, enu.north))
     explanation = DataFrame()
@@ -78,7 +80,7 @@ function attractiveness(sindex::AttractivenessSpatIndex, enu::ENU; explain::Bool
         a = item.val  # typeof(a) === AttractivenessData
         poidistance = OpenStreetMapX.distance(enu, a.enu)
         poidistance > a.range && continue
-        res[a.class] += a.points * (a.range - poidistance) / a.range
+        res[a.class] = aggregator(res[a.class],   a.points * (a.range - poidistance) / a.range)
         if explain
             append!(explanation, DataFrame(;a.class,a.points,poidistance,a.lla.lat,a.lla.lon))
         end

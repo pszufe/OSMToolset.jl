@@ -5,7 +5,8 @@ using SpatialIndexing
 using StatsBase
 
 using Parsers, EzXML, Parameters
-import OpenStreetMapX: OSMData, LLA, ENU
+import OpenStreetMapX
+import OpenStreetMapX: OSMData, LLA, ENU, distance
 
 
 include("common.jl")
