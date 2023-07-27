@@ -6,13 +6,9 @@ CurrentModule = OSMToolset
 
 Documentation for OSMToolset.jl
 
-For details please go to the [Reference](https://pszufe.github.io/OSMToolset.jl/latest/reference/) section.
-
-Package features
-----------------
+For details please go to the [Reference](reference/) section.
 
 
-```
-@index
-```
+<sup>Aknowledgment: This tool is using some code from the previous work of Marcin Żurek, under the same research grant. The initial prototype can be found at: 
+https://github.com/mkloe/OSMgetPOI.jl<sup>
 

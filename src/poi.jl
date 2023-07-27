@@ -1,11 +1,25 @@
 
-
 struct Attract
     class::String
     points::Int
     range::Int
 end
+"""
+    Represents the configuration of the data scraping process from OSM XML.
+Only those pieces of data will be scraped that are defined here.
 
+The configuration is defined in a DataFrame with the following columns:
+`class`, `key`, `values`, `points`, `range`.
+Instead of the DataFrame a paths to a CSV file can be provided.
+
+* Constructors *
+- `AttractivenessConfig()` - default inbuilt configuration for data scraping. 
+   Note that the default configuration can change with library updates
+- `AttractivenessConfig(filename::AbstractString)` - use a CSV file with configuration
+- `AttractivenessConfig(df::DataFrame)` - use a `DataFrame`
+
+
+"""
 struct AttractivenessConfig 
     dkeys::Set{String}
     attract::Dict{Union{String, Tuple{String,String}}, Attract}
@@ -13,15 +27,15 @@ end
 
 const __builtin_attract_path = joinpath(@__DIR__, "..", "config", "Attractiveness.csv")
 
-function AttractivenessConfig(filename::AbstractString = __builtin_attract_path)
-    dfa = CSV.read(filename, DataFrame,types=Dict(
-        :class => String, :key => String, :points => Int, :range => Int, :values =>String) )
-    dfa.values = (x->string.(split(x,','))).(dfa.values)
+function AttractivenessConfig(df::DataFrame)
+    colnames = ["class", "key", "points", "range", "values"]
+    @assert all(colnames .∈ Ref(names(df)))
     dkeys = Set(dfa.key)
     attract = Dict{Union{String, Tuple{String,String}}, Attract}()
     for row in eachrow(dfa)
         a = Attract(row.class, row.points, row.range)
-        for value in row.values
+        for value in string.(split(row.value,','))
+
             if value == "*"
                 attract[row.key] = a
             else
@@ -30,6 +44,11 @@ function AttractivenessConfig(filename::AbstractString = __builtin_attract_path)
         end
     end
     AttractivenessConfig(dkeys, attract)
+end
+
+function AttractivenessConfig(filename::AbstractString = __builtin_attract_path)
+    AttractivenessConfig(CSV.read(filename, DataFrame,types=Dict(
+        :class => String, :key => String, :points => Int, :range => Int, :values =>String) ))
 end
 
 const __builtin_attract = AttractivenessConfig()
