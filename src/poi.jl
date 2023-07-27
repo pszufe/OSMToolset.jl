@@ -30,12 +30,11 @@ const __builtin_attract_path = joinpath(@__DIR__, "..", "config", "Attractivenes
 function AttractivenessConfig(df::DataFrame)
     colnames = ["class", "key", "points", "range", "values"]
     @assert all(colnames .∈ Ref(names(df)))
-    dkeys = Set(dfa.key)
+    dkeys = Set(df.key)
     attract = Dict{Union{String, Tuple{String,String}}, Attract}()
-    for row in eachrow(dfa)
+    for row in eachrow(df)
         a = Attract(row.class, row.points, row.range)
-        for value in string.(split(row.value,','))
-
+        for value in string.(split(row.values,','))
             if value == "*"
                 attract[row.key] = a
             else

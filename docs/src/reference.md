@@ -12,6 +12,7 @@ Measuring Attractiveness Spatial Index
 ---------------------
 ```@docs
 find_poi(::AbstractString; ::AbstractString)
+AttractivenessConfig
 AttractivenessSpatIndex
 attractiveness(::AttractivenessSpatIndex, ::ENU; ::Bool)
 attractiveness(::AttractivenessSpatIndex, ::Float64; ::Float64)

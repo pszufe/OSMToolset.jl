@@ -17,6 +17,7 @@ include("attractiveness.jl")
 
 export tile_osm_file
 export FloatLon
+export AttractivenessConfig
 export AttractivenessSpatIndex
 export attractiveness
 export find_poi
