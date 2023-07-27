@@ -49,17 +49,32 @@ function AttractivenessSpatIndex(df::AbstractDataFrame, refLLA::LLA = LLA(mean(d
 end
 
 """
-    attractiveness(sindex::AttractivenessSpatIndex, latitude::Float64, longitude::Float64; explain::Bool=false)
+    attractiveness(sindex::AttractivenessSpatIndex, latitude::Float64, longitude::Float64, aggregator::Function=+; explain::Bool=false)
 
 Returns the multidimensional attractiveness measure
 for the given spatial index `sindex` and `lattitude` and `longitude`
 If `explain` is set to true the result will additionally contain details 
 about objects used to calculate the attractiveness
 """
-function attractiveness(sindex::AttractivenessSpatIndex, latitude::Float64, longitude::Float64; explain::Bool=false)
-    enu = ENU(LLA(latitude,longitude),sindex.refLLA)
+function attractiveness(sindex::AttractivenessSpatIndex, latitude::Float64, longitude::Float64, aggregator::Function=+; explain::Bool=false)
+    attractiveness(sindex, LLA(latitude,longitude);explain = explain)
+end
+
+"""
+attractiveness(sindex::AttractivenessSpatIndex, lla::LLA, aggregator::Function=+; explain::Bool=false)
+
+Returns the multidimensional attractiveness measure
+for the given spatial index `sindex` and `LLA` coordinates.
+If `explain` is set to true the result will additionally contain details 
+about objects used to calculate the attractiveness
+"""
+
+function attractiveness(sindex::AttractivenessSpatIndex, lla::LLA, aggregator::Function=+; explain::Bool=false)
+    enu = ENU(lla,sindex.refLLA)
     attractiveness(sindex, enu;explain = explain)
 end
+
+
 
 """
     attractiveness(sindex::AttractivenessSpatIndex, enu::ENU, aggregator::Function=+; explain::Bool=false)
@@ -70,7 +85,7 @@ Note that the enu coordinates *must* use `sindex.refLLA` as the reference point.
 If `explain` is set to true the result will additionally contain details 
 about objects used to calculate the attractiveness.
 
-Attractiveness will be aggregagated in a way defined by the `aggregator` paramterr
+Attractiveness will be aggregagated in a way defined by the `aggregator` function.
 """
 function attractiveness(sindex::AttractivenessSpatIndex, enu::ENU, aggregator::Function=+; explain::Bool=false)
     res = Dict(sindex.measures .=> 0.0)

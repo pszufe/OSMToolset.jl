@@ -14,8 +14,9 @@ Measuring Attractiveness Spatial Index
 find_poi(::AbstractString; ::AbstractString)
 AttractivenessConfig
 AttractivenessSpatIndex
-attractiveness(::AttractivenessSpatIndex, ::ENU; ::Bool)
-attractiveness(::AttractivenessSpatIndex, ::Float64; ::Float64)
+attractiveness(::AttractivenessSpatIndex, ::ENU; ::Function; ::Bool)
+attractiveness(::AttractivenessSpatIndex, ::Float64, ::Float64; ::Function; ::Bool)
+attractiveness(::AttractivenessSpatIndex, ::LLA; ::Function; ::Bool)
 ```
 
 Tiling OSM file
