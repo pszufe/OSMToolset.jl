@@ -6,10 +6,10 @@
 
 ## Aknowledgments 
 
-<sup>This research was funded in whole or in part by [National Science Centre,  Poland][2021/41/B/HS4/03349]. 
+<sup>This research was funded in whole or in part by [National Science Centre,  Poland][2021/41/B/HS4/03349].</sup>
 
-This tool is using some code from the previous work of Marcin Żurek, under the same research grant. The initial prototype can be found at: 
-https://github.com/mkloe/OSMgetPOI.jl<sup>
+<sup>This tool is using some code from the previous work of Marcin Żurek, under the same research grant. The initial prototype can be found at: 
+https://github.com/mkloe/OSMgetPOI.jl</sup>
 
 
 <!-- [![Build Status](https://github.com/pszufe/OSMToolset.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/pszufe/OSMToolset.jl/actions/workflows/CI.yml?query=branch%3Amain)
