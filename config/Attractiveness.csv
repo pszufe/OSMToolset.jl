@@ -1,4 +1,4 @@
-class	key	points	range	values
+class	key	influence	range	values
 education	amenity	3	2000	kindergarten
 education	amenity	5	3000	school,music_school,language_school
 education	amenity	20	10000	university,college

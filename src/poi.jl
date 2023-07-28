@@ -1,7 +1,7 @@
 
 struct Attract
     class::String
-    points::Int
+    influence::Int
     range::Int
 end
 """
@@ -9,7 +9,7 @@ end
 Only those pieces of data will be scraped that are defined here.
 
 The configuration is defined in a DataFrame with the following columns:
-`class`, `key`, `values`, `points`, `range`.
+`class`, `key`, `values`, `influence`, `range`.
 Instead of the DataFrame a paths to a CSV file can be provided.
 
 * Constructors *
@@ -28,17 +28,17 @@ end
 const __builtin_attract_path = joinpath(@__DIR__, "..", "config", "Attractiveness.csv")
 
 function AttractivenessConfig(df::DataFrame)
-    colnames = ["class", "key", "points", "range", "values"]
+    colnames = ["class", "key", "influence", "range", "values"]
     @assert all(colnames .∈ Ref(names(df)))
-    dkeys = Set(df.key)
+    dkeys = Set(String.(df.key))
     attract = Dict{Union{String, Tuple{String,String}}, Attract}()
     for row in eachrow(df)
-        a = Attract(row.class, row.points, row.range)
-        for value in string.(split(row.values,','))
+        a = Attract(String(row.class), Float64(row.influence), Float64(row.range))  
+        for value in string.(split(String(row.values),','))
             if value == "*"
-                attract[row.key] = a
+                attract[String(row.key)] = a
             else
-                attract[row.key, value] = a
+                attract[String(row.key), value] = a
             end
         end
     end
@@ -47,7 +47,7 @@ end
 
 function AttractivenessConfig(filename::AbstractString = __builtin_attract_path)
     AttractivenessConfig(CSV.read(filename, DataFrame,types=Dict(
-        :class => String, :key => String, :points => Int, :range => Int, :values =>String) ))
+        :class => String, :key => String, :influence => Float64, :range => Float64, :values =>String) ))
 end
 
 const __builtin_attract = AttractivenessConfig()
@@ -156,12 +156,12 @@ function find_poi(filename::AbstractString; attract_config::AttractivenessConfig
                 a = get(attract, key, get(attract, (key, value), nothing))
                 if !isnothing(a)
                     # we are interested only in attractive POIs
-                    push!(df, (;elemtype,elemid,nodeid=curnode.id, lat=curnode.lat, lon=curnode.lon, key, value,a.class, a.points, a.range ) )
+                    push!(df, (;elemtype,elemid,nodeid=curnode.id, lat=curnode.lat, lon=curnode.lon, key, value,a.class, a.influence, a.range ) )
                 end
             end
         end
     end
-    df2 = DataFrame(g[findmax(g.points)[2], :]  for g in  groupby(df, [:nodeid, :class]))
+    df2 = DataFrame(g[findmax(g.influence)[2], :]  for g in  groupby(df, [:nodeid, :class]))
     df2
 end
 
@@ -176,11 +176,11 @@ function find_poi(osm::OSMData; attract_config::AttractivenessConfig=__builtin_a
         # otherwise try to get attractiveness for the tuple
         a = get(attract, key, get(attract, (key, value), nothing))
         if a !== nothing
-            # we are interested only in attractive POIs            #push!(df, (;elemtype, elemid, nodeid=curnode.id, lat=curnode.lat, lon=curnode.lon, key, value, a.class, a.points, a.range))
+            # we are interested only in attractive POIs
             lla = osm.nodes[node]
-            push!(df, (;nodeid=node, lat=lla.lat, lon=lla.lon, key, value, a.class, a.points, a.range))
+            push!(df, (;nodeid=node, lat=lla.lat, lon=lla.lon, key, value, a.class, a.influence, a.range))
         end
     end
-    df2 = DataFrame(g[findmax(g.points)[2], :] for g in groupby(df, [:nodeid, :class]))
+    df2 = DataFrame(g[findmax(g.influence)[2], :] for g in groupby(df, [:nodeid, :class]))
     return df2
 end

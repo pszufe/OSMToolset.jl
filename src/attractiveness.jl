@@ -4,8 +4,8 @@
 
 struct AttractivenessData
     class::Symbol
-    points::Int
-    range::Int
+    influence::Float64
+    range::Float64
     enu::ENU
     lla::LLA
 end
@@ -26,7 +26,7 @@ The CSV file or DataFrame should have the following columns:
     - class - data class in attractiveness index, each class name creates attractiveness dimension
     - key - key in the XML file <tag>
     - values - values in the <tag> (a star `"*"` catches all values)
-    - points - number of influance points 
+    - influence - strength of influence  
     - range - maximum influence range in meters 
 
 When a `DataFrame` is provided the additional parameter `refLLA` can be provided for the reference 
@@ -40,7 +40,7 @@ function AttractivenessSpatIndex(df::AbstractDataFrame, refLLA::LLA = LLA(mean(d
         enu = ENU(lla, refLLA)
         range_ = df.range[id]
         rect = SpatialIndexing.Rect((enu.east-range_,enu.north-range_), (enu.east+range_,enu.north+range_))
-        a = AttractivenessData(Symbol(df.class[id]), df.points[id], df.range[id], enu, lla)
+        a = AttractivenessData(Symbol(df.class[id]), df.influence[id], df.range[id], enu, lla)
         push!(data, SpatialElem(rect, id, a))
     end
     tree = RTree{Float64, 2}(Int, AttractivenessData, variant=SpatialIndexing.RTreeStar)
@@ -95,9 +95,9 @@ function attractiveness(sindex::AttractivenessSpatIndex, enu::ENU, aggregator::F
         a = item.val  # typeof(a) === AttractivenessData
         poidistance = OpenStreetMapX.distance(enu, a.enu)
         poidistance > a.range && continue
-        res[a.class] = aggregator(res[a.class],   a.points * (a.range - poidistance) / a.range)
+        res[a.class] = aggregator(res[a.class],   a.influence * (a.range - poidistance) / a.range)
         if explain
-            append!(explanation, DataFrame(;a.class,a.points,poidistance,a.lla.lat,a.lla.lon))
+            append!(explanation, DataFrame(;a.class,a.influence,poidistance,a.lla.lat,a.lla.lon))
         end
     end
     if explain
