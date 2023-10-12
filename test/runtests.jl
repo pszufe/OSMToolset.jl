@@ -50,7 +50,7 @@ end
 
 function get_nodeids(f) 
     df = DataFrame(OSMToolset.gettag.(readlines(test_map)))
-    df[(df.type.==:node) .&& (df.id .!= 0) , :id]
+    df[(df.type.==:node) .& (df.id .!= 0) , :id]
 end
 nodes1 = sort!(get_nodeids(test_map))
 
