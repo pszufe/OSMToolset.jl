@@ -8,11 +8,16 @@ DocTestSetup = quote
 end
 ```
 
-Measuring Attractiveness Spatial Index
+Scraping points-of-interest (POI)
 ---------------------
 ```@docs
 find_poi(::AbstractString; ::AbstractString)
-AttractivenessConfig
+ScrapePOIConfig
+```
+
+Measuring Attractiveness Spatial Index
+--------------------------------------
+```@docs
 AttractivenessSpatIndex
 attractiveness(::AttractivenessSpatIndex, ::ENU; ::Function; ::Bool)
 attractiveness(::AttractivenessSpatIndex, ::Float64, ::Float64; ::Function; ::Bool)

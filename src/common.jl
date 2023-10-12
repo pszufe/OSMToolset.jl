@@ -9,3 +9,10 @@ struct Node
     lat::Float64
     lon::Float64
 end
+
+"""
+    Provides location of sample OSM file for tests 
+"""
+function sample_osm_file()::String
+    joinpath(dirname(pathof(OSMToolset)),"..","test","data","boston.osm")
+end

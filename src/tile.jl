@@ -1,6 +1,8 @@
 
 
-
+"""
+Internal method for parsing XML line
+"""
 function gettag(line)
     ixₐ = findfirst('<', line)
     ixₐ == nothing && return ""
@@ -32,7 +34,7 @@ end
 """
 primitive type FloatLon <: AbstractFloat 64 end
 function FloatLon(x::Float64)
-    if abs(x) > 360
+    if abs(x) > 360.0
         x = x % 360
     end
     if x > 180.0
@@ -63,6 +65,9 @@ import Base: +,-
     lonwh::Float64 = maxlon - minlon
 end
 
+"""
+Internal method generating XML line from given bounds
+"""
 toxmlline(bounds::Bounds) =  """<bounds minlat="$(bounds.minlat)" minlon="$(bounds.minlon)" maxlat="$(bounds.maxlat)" maxlon="$(bounds.maxlon)"/>"""
 
 
@@ -80,7 +85,11 @@ toxmlline(bounds::Bounds) =  """<bounds minlat="$(bounds.minlat)" minlon="$(boun
                              for row in 1:nrow, col in 1:ncol ]
 end
 
+""" 
+    gettile(boundstiles::BoundsTiles, lat, lon)
 
+Returns a `(row, column)` tile identifier for a given `lat` and `lon` coordinates.
+"""
 function gettile(boundstiles::BoundsTiles, lat, lon)
     bounds = boundstiles.bounds
     row = min(boundstiles.nrow, max(1, floor(Int, (lat - bounds.minlat) / boundstiles.tilelatwh) + 1))
@@ -89,7 +98,9 @@ function gettile(boundstiles::BoundsTiles, lat, lon)
 end
 
 """
-Return Bounds that can be found in the first 10 lines of the OSM file named 'filename'
+    getbounds(filename::AbstractString)::Bounds
+
+Returns Bounds that can be found in the first 10 lines of the OSM file named 'filename'
 """
 function getbounds(filename::AbstractString)::Bounds
     res = nothing
@@ -120,6 +131,7 @@ end
 
 """
     calc_tiling(bounds::Bounds, latTileSize::Float64, lonTileSize::Float64)
+
 Calculates recommended bounds, number of rows and columns for a given
 `bounds` and size of tile `latTileSize` x `lonTileSize`.
 """
@@ -134,6 +146,7 @@ end
 
 """
     calc_tiling(filename::AbstractString, latTileSize::Float64, lonTileSize::Float64)
+
 Calculates recommended bounds, number of rows and columns for a given
 `filename` and size of tile `latTileSize` x `lonTileSize`.
 """
@@ -156,6 +169,8 @@ If `bounds` are not given they will be calculated using `getbounds` function.
 The tiling will be performed with a matrix having `nrow` rows and `ncol` columns.
 The output will be written to the folder name `out_dir`.  
 If none `out_dir` is given than as the output is written to where `filename` is located.
+
+Returns a `Matrix{String}` of size `nrow` x `ncol` containing the names of the files created.
 """
 function tile_osm_file(filename::AbstractString, bounds::Bounds = getbounds(filename); nrow::Integer=2, ncol::Integer=3, out_dir::String=dirname(filename))
     #dictionary of tiles for ways
@@ -238,10 +253,11 @@ function tile_osm_file(filename::AbstractString, bounds::Bounds = getbounds(file
     
 
     iotiles = Matrix{IOStream}(undef, nrow, ncol)
+    filenames = Matrix{String}(undef, nrow, ncol)
     for row in 1:nrow, col in 1:ncol
         tile_bounds = boundstiles.tiles[row,col]
-        tile_fname = "$(tile_bounds.minlat)_$(tile_bounds.maxlat)_$(tile_bounds.minlon)_$(tile_bounds.maxlon).osm"
-        iotiles[row,col] = open(joinpath(out_dir, tile_fname), "w")
+        filenames[row,col] = "$(tile_bounds.minlat)_$(tile_bounds.maxlat)_$(tile_bounds.minlon)_$(tile_bounds.maxlon).osm"
+        iotiles[row,col] = open(joinpath(out_dir, filenames[row,col]), "w")
     end
 
     # Buffers for each output
@@ -322,5 +338,6 @@ function tile_osm_file(filename::AbstractString, bounds::Bounds = getbounds(file
     println.(iotiles, Ref("</osm>"))
     close.(iotiles)
     close(io)
+    return filenames
 end
 
