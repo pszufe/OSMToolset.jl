@@ -6,7 +6,9 @@ CurrentModule = OSMToolset
 
 Documentation for OSMToolset.jl
 
-For details please go to the [Reference](reference/) section.
+For details please go to the [Reference](reference.md) section.
+
+There is also a [Visualization](visualize.md) example.
 
 
 ## Aknowledgments 

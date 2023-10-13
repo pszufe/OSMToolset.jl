@@ -1,5 +1,8 @@
-### How to visualize the data
+# Visualization
 
+## How to visualize the data
+
+Below is a sample piece of code that can be used to generate a visualization of POIs on a map.
 ```
 using PyCall
 using Colors
@@ -33,4 +36,6 @@ flm.Rectangle(bounds, color="blue",weight=2).add_to(m)
 
 m
 ```
+The obtained result should be similar to the picture below.
 
+![POI Visualization](poiviz.png)

@@ -1,17 +1,53 @@
 
+"""
+    abstract type MetaPOI end
 
+A base time for representing metadata related to a POI location.
+"""
 abstract type MetaPOI end
 
+"""
+    struct NoneMetaPOI <: MetaPOI; end
+
+A subtype of `MetaPOI` that does not contain any metadata.
+"""
 struct NoneMetaPOI <: MetaPOI; end
+"""
+    struct AttractivenessMetaPOI <: MetaPOI
+
+A subtype of `MetaPOI` that contains metadata for attractiveness 
+(the default configuration of scraping).
+This assumes that the metadata is stored in a CSV file with the following columns:
+`key`, `values`, `group`, `influence`, `range`.
+"""
 struct AttractivenessMetaPOI <: MetaPOI
     group::Symbol
     influence::Float64
     range::Float64
 end
 
-get_attractiveness_group(a::AttractivenessMetaPOI) = a.group
+"""
+    get_attractiveness_group(a::AttractivenessMetaPOI)
+    
+Default group for AttractivenessMetaPOI which is `a.group`.
+"""
+get_attractiveness_group(a::AttractivenessMetaPOI) = 
+"""
+    get_attractiveness_range(a::AttractivenessMetaPOI)
+    
+Default range for AttractivenessMetaPOI whic is the `a.range`.
+"""
 get_attractiveness_range(a::AttractivenessMetaPOI) = a.range
+"""
+    get_attractiveness_group(a::NoneMetaPOI) 
+    
+Default group for NoneMetaPOI (`NoneMetaPOI`).
+"""
 get_attractiveness_group(a::NoneMetaPOI) = :NoneMetaPOI
+"""
+    get_attractiveness_range(a::MetaPOI)
+You can create own subtypes of `MetaPOI` but than range needs to be provided.
+"""
 get_attractiveness_range(a::MetaPOI) = throw(ArgumentError("`get_attractiveness_range` not implemented for type $(typeof(a)). You can also just provide a custom function via the `get_range` parameter such as `get_range= a -> 100`"))
 
 

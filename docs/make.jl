@@ -1,29 +1,31 @@
 using Documenter
 using Pkg
 
-
-try
-    using OSMToolset
-catch
-    if !("../src/" in LOAD_PATH)
-	   push!(LOAD_PATH,"../src/")
-	   @info "Added \"../src/\"to the path: $LOAD_PATH "
-	   using OSMToolset
+if isfile("src/OSMToolset.jl")
+    if !("." in LOAD_PATH)
+        push!(LOAD_PATH,".")
+    end
+elseif isfile("../src/OSMToolset.jl") 
+    if !(".." in LOAD_PATH)
+	   push!(LOAD_PATH,"..")
     end
 end
+
+using OSMToolset
 
 DocMeta.setdocmeta!(OSMToolset, :DocTestSetup, :(using OSMToolset); recursive=true)
 
 makedocs(
     modules = [OSMToolset],
-    sitename = "OSMToolset.jl",
+    sitename = "OSMToolset",
     format = format = Documenter.HTML(;
         prettyurls = get(ENV, "CI", nothing) == "true",
         canonical="https://pszufe.github.io/OSMToolset.jl/stable/",
         edit_link="main",
         assets=String[],
     ),
-    pages = ["Home" => "index.md", "Reference" => "reference.md"],
+    checkdocs = :exports,
+    pages = ["Home" => "index.md", "Reference" => "reference.md", "Visualization" => "visualize.md"],
     doctest = true
 )
 

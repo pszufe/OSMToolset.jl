@@ -71,7 +71,14 @@ function AttractivenessSpatIndex{T}(df::AbstractDataFrame, refLLA::LLA = LLA(mea
 end
 
 AttractivenessSpatIndex(df::AbstractDataFrame, refLLA::LLA = LLA(mean(df.lat), mean(df.lon))) = AttractivenessSpatIndex{AttractivenessMetaPOI}(df, refLLA)
-
+"""
+    calculate_attractiveness(a::AttractivenessMetaPOI, poidistance::Number)
+    
+Default function used to calculate the attractiveness for `AttractivenessMetaPOI `
+on the base of distance.
+You might want to provide your own implementation and than pass it as a parameter 
+whe using the `attractiveness` function.
+"""
 function calculate_attractiveness(a::AttractivenessMetaPOI, poidistance::Number)
     if poidistance >= a.range
         return 0.0
