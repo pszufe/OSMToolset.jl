@@ -13,5 +13,5 @@ There is also a [Visualization](visualize.md) example.
 
 ## Aknowledgments 
 
-<sup>This research was funded in whole or in part by [National Science Centre,  Poland][2021/41/B/HS4/03349]. </sup>
+This research was funded by National Science Centre,  Poland grant number 2021/41/B/HS4/03349. 
 

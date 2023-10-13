@@ -1,19 +1,21 @@
 module OSMToolset
 
-using CSV, DataFrames
+using CSV
+using DataFrames
 using SpatialIndexing
 using StatsBase
 using NamedTupleTools
-using Parsers, EzXML, Parameters
+using Parsers
+using EzXML
+using Parameters
 import OpenStreetMapX
-import OpenStreetMapX: OSMData, LLA, ENU, distance
+import OpenStreetMapX: LLA, ENU, distance
 
 
 include("common.jl")
-include("tile.jl")
 include("poi.jl")
 include("attractiveness.jl")
-
+include("tile.jl")
 
 export tile_osm_file
 export FloatLon

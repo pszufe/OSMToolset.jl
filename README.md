@@ -1,10 +1,11 @@
 
 
-# Tools for Open Steet Map (OSM) Point-of-Interest (POI) extraction and tiling/slicing of map files.
+# Tools for Open Steet Map: Point-of-Interest extraction and tiling of map data
 
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://pszufe.github.io/OSMToolset.jl/)
 
-The goal of the package is to provide a fast and convenient interaface for extraction data from OpenStreetMap project and for construction of walkability indexes based on map data.
+The maps provided by the OpenStreetMap project contain very detailed information about schools, businesses, shops, restaurants, cafes, parking spaces, hospitals etc. The goal of this tools is to provide an effient API for extraction of data on such points of interest (POIs) for further processing. This information can be further used e.g. to build walkability indexes that can be used to explain attractiveness of some parts of a city. Hence the second functionality of the package is to provide an interface (based on the `SpatialInexing.jl` package) for efficient building of attractiveness indexes of any urban area.
+Since the OSM map XML files are usully very large, sometimes it is required to tile the files into smailler chunks for efficient parallel processing. Hence, the third functionality of this package is an OSM file tiler.
 
 The package offers the following functionalities:
 1. Export points-of-interests (POIs) from a OSM xml map file to a `DataFrame`
@@ -134,7 +135,7 @@ The OSM tiler is simultanously opening a file writer for each file. The operatin
 
 ## Aknowledgments 
 
-<sup>This research was funded in whole or in part by [National Science Centre,  Poland][2021/41/B/HS4/03349].</sup>
+This research was funded by National Science Centre,  Poland, grant number 2021/41/B/HS4/03349.
 
 <sup>This tool is using some code from the previous work of Marcin Żurek, under the same research grant. The initial prototype can be found at: 
 https://github.com/mkloe/OSMgetPOI.jl</sup>
@@ -142,8 +143,4 @@ https://github.com/mkloe/OSMgetPOI.jl</sup>
 
 <!-- [![Build Status](https://github.com/pszufe/OSMToolset.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/pszufe/OSMToolset.jl/actions/workflows/CI.yml?query=branch%3Amain)
 
-[![Build Status](https://travis-ci.com/pszufe/OSMToolset.jl.svg?branch=main)](https://travis-ci.com/pszufe/OSMToolset.jl)
-[![Build Status](https://ci.appveyor.com/api/projects/status/github/pszufe/OSMToolset.jl?svg=true)](https://ci.appveyor.com/project/pszufe/OSMToolset-jl)
-[![Build Status](https://api.cirrus-ci.com/github/pszufe/OSMToolset.jl.svg)](https://cirrus-ci.com/github/pszufe/OSMToolset.jl)
 [![Coverage](https://codecov.io/gh/pszufe/OSMToolset.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/pszufe/OSMToolset.jl)
-[![Coverage](https://coveralls.io/repos/github/pszufe/OSMToolset.jl/badge.svg?branch=main)](https://coveralls.io/github/pszufe/OSMToolset.jl?branch=main) -->
