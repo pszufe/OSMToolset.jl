@@ -31,19 +31,22 @@ end
     
 Default group for AttractivenessMetaPOI which is `a.group`.
 """
-get_attractiveness_group(a::AttractivenessMetaPOI) = 
+get_attractiveness_group(a::AttractivenessMetaPOI) = a.group
+
 """
     get_attractiveness_range(a::AttractivenessMetaPOI)
     
 Default range for AttractivenessMetaPOI whic is the `a.range`.
 """
 get_attractiveness_range(a::AttractivenessMetaPOI) = a.range
+
 """
     get_attractiveness_group(a::NoneMetaPOI) 
     
 Default group for NoneMetaPOI (`NoneMetaPOI`).
 """
 get_attractiveness_group(a::NoneMetaPOI) = :NoneMetaPOI
+
 """
     get_attractiveness_range(a::MetaPOI)
 You can create own subtypes of `MetaPOI` but than range needs to be provided.
