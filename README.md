@@ -13,15 +13,15 @@ The package offers the following functionalities:
 3. OSM map tiling/slicing - functionality to tile a large OSM file into smaller tiles without loosing connections on the tile edge. The map tiling works directly on XML files
 
 This toolset has been constructed with performance in mind for large scale scraping of spatial data.
-Hence, this package should work sufficiently well with datasets of size of entire states or countries. 
+Hence, this package should work sufficiently well with datasets of size of entire states or countries.
 
 ## Exporting points of interests
 
-The examples assume that the sample file is used 
+The examples assume that the sample file is used
 ```
 file = sample_osm_file()
 ```
-Let us use the default configuration for parsing. 
+Let us use the default configuration for parsing.
 ```
 julia> df1 = find_poi(file)
 78×10 DataFrame
@@ -40,7 +40,7 @@ df1 = find_poi(file;scrape_config=myconfig)
 ```
 
 Suppose that rather you want to configure manually what is scraped. Perhaps we just wanted parking spaces
-that can be either defined in an OSM file as `amenity=parking` or as `parking` key value: 
+that can be either defined in an OSM file as `amenity=parking` or as `parking` key value:
 ```
 julia> config = DataFrame(key=["parking", "amenity"], values=["*", "parking"])
 2×2 DataFrame
@@ -56,7 +56,7 @@ Now this can be scraped as :
 ```
 julia> df2 = find_poi(file; scrape_config=ScrapePOIConfig{NoneMetaPOI}(config))
 12×7 DataFrame
- Row │ elemtype  elemid      nodeid      lat      lon       key      value   
+ Row │ elemtype  elemid      nodeid      lat      lon       key      value
      │ Symbol    Int64       Int64       Float64  Float64   String   String
 ─────┼───────────────────────────────────────────────────────────────────────
    1 │ way        187565434  1982207088  42.3603  -71.0866  amenity  parking
@@ -64,7 +64,7 @@ julia> df2 = find_poi(file; scrape_config=ScrapePOIConfig{NoneMetaPOI}(config))
   12 │ way       1052438049  9672086211  42.3624  -71.0878  parking  surface
                                                               10 rows omitted
 ```
-This data can be further processed in many ways. For example [here](https://pszufe.github.io/OSMToolset.jl/dev/visualize/) is a sample code that performs vizualisation  
+This data can be further processed in many ways. For example [here](https://pszufe.github.io/OSMToolset.jl/dev/visualize/) is a sample code that performs vizualisation
 
 ## Spatial attractiveness processing
 
@@ -72,9 +72,9 @@ Suppose we have the `df1` data from the previous example. Now we can do a spatia
 ```
 ix = AttractivenessSpatIndex(df1)
 ```
-Note that the default configuration works with the `AttractivenessMetaPOI` data format. If you want a different structure of data for this index you need to crate a subtype of `MetaPOI` and use it in the constructor. 
+Note that the default configuration works with the `AttractivenessMetaPOI` data format. If you want a different structure of data for this index you need to crate a subtype of `MetaPOI` and use it in the constructor.
 
-Let us consider some point on the map: 
+Let us consider some point on the map:
 ```
 lat, lon = mean(df1.lat), mean(df1.lon)
 ```
@@ -87,7 +87,7 @@ If, for the debugging purposes, we want to understand what data has been used to
 ```
 julia> attractiveness(ix, lat, lon ;explain=true).explanation
 68×7 DataFrame
- Row │ group        influence  range    attractiveness  poidistance  lat      lon      
+ Row │ group        influence  range    attractiveness  poidistance  lat      lon
      │ Symbol       Float64    Float64  Float64         Float64      Float64  Float64
 ─────┼─────────────────────────────────────────────────────────────────────────────────
    1 │ education         20.0  10000.0       16.9454       1527.31   42.3553  -71.105
@@ -97,7 +97,7 @@ julia> attractiveness(ix, lat, lon ;explain=true).explanation
 ```
 The attractiveness function is fully configurable on how the attractiveness is actually calculated.
 The available parameters can be used to define attractiveness dimension, aggreagation function,
-attractivess function and how the distance is on map is calculated. 
+attractivess function and how the distance is on map is calculated.
 
 Let us for an example take maximum influence values rather than summing them:
 ```
@@ -131,16 +131,11 @@ After the execution `outfile` will be a matrix with file names of all tiles.
 
 File tiling limitations
 -----------------------
-The OSM tiler is simultanously opening a file writer for each file. The operating system might limit the number of simultanously opened file descriptors. If you want to create large number of tiles you need to either change the operating system setting accordingly or use a recursive approach to file tiling. 
+The OSM tiler is simultanously opening a file writer for each file. The operating system might limit the number of simultanously opened file descriptors. If you want to create large number of tiles you need to either change the operating system setting accordingly or use a recursive approach to file tiling.
 
-## Aknowledgments 
+## Aknowledgments
 
 This research was funded by National Science Centre,  Poland, grant number 2021/41/B/HS4/03349.
 
-<sup>This tool is using some code from the previous work of Marcin Żurek, under the same research grant. The initial prototype can be found at: 
+<sup>This tool is using some code from the previous work of Marcin Żurek, under the same research grant. The initial prototype can be found at:
 https://github.com/mkloe/OSMgetPOI.jl</sup>
-
-
-<!-- [![Build Status](https://github.com/pszufe/OSMToolset.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/pszufe/OSMToolset.jl/actions/workflows/CI.yml?query=branch%3Amain)
-
-[![Coverage](https://codecov.io/gh/pszufe/OSMToolset.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/pszufe/OSMToolset.jl)
