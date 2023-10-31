@@ -1,19 +1,35 @@
 
 
-# Tools for Open Steet Map: Point-of-Interest extraction and tiling of map data
+# Tools for manipulation of Open Steet Map data
 
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://pszufe.github.io/OSMToolset.jl/)
+**Tools for point-of-interest (POI) extraction, walkability/ indexes and tiling of XML map data**
 
-The maps provided by the OpenStreetMap project contain very detailed information about schools, businesses, shops, restaurants, cafes, parking spaces, hospitals etc. The goal of this tools is to provide an effient API for extraction of data on such points of interest (POIs) for further processing. This information can be further used e.g. to build walkability indexes that can be used to explain attractiveness of some parts of a city. Hence the second functionality of the package is to provide an interface (based on the `SpatialInexing.jl` package) for efficient building of attractiveness indexes of any urban area.
-Since the OSM map XML files are usully very large, sometimes it is required to tile the files into smailler chunks for efficient parallel processing. Hence, the third functionality of this package is an OSM file tiler.
+**Documentation**:  [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://pszufe.github.io/OSMToolset.jl/)
 
-The package offers the following functionalities:
-1. Export points-of-interests (POIs) from a OSM xml map file to a `DataFrame`
+`OSMToolset` package provides the tools for efficient extraction of [point-of-interest](https://en.wikipedia.org/wiki/Point_of_interest) from maps and building various custom [walkability](https://en.wikipedia.org/wiki/Walkability) indexes  in [Julia](https://julialang.org/).
+
+# Installation
+```julia
+using Pkg; Pkg.add("SpatialIndexing")
+```
+
+# Features
+
+1. Export points-of-interests (POIs) from a OSM xml map file to a [`DataFrame`](https://github.com/JuliaData/DataFrames.jl)
 2. A spatial attractiveness index for analyzig location attractivenss across maps (can be used for an example in research of city's walkability index)
-3. OSM map tiling/slicing - functionality to tile a large OSM file into smaller tiles without loosing connections on the tile edge. The map tiling works directly on XML files
+3. A spatial index for finding nearest nodes in maps to a given `LLA` or `ENU` coordinates
+4. OSM map tiling/slicing - functionality to tile a large OSM file into smaller tiles without loosing connections on the tile edge. The map tiling works directly on XML files
+
+![Restaurant walkability](docs/src/Boston_restaurant.png)
+<br>(a complete code for this visualization can be found [in the docs](https://pszufe.github.io/OSMToolset.jl/stable/visualize/))
+
+Please note that the maps provided by the [OpenStreetMap](https://www.openstreetmap.org/) project contain very detailed information about schools, businesses, shops, restaurants, cafes, parking spaces, hospitals etc. With this tool you get an effient, customizable API for extraction of data on such points of interests for further processing. This information can be further used e.g. to build walkability indexes that can be used to explain attractiveness of some parts of a city. Hence the second functionality of the package is to provide an interface (based on the [`SpatialIndexing`](https://github.com/alyst/SpatialIndexing.jl) package) for building of efficient attractiveness indexes of any urban area.
+Since the OSM map XML files are usully very large, sometimes it is required to tile the files into smailler chunks for efficient parallel processing. Hence, yet another functionality of this package is an OSM file tiler.
 
 This toolset has been constructed with performance in mind for large scale scraping of spatial data.
 Hence, this package should work sufficiently well with datasets of size of entire states or countries.
+
+# Basic functionalities walkthrough
 
 ## Exporting points of interests
 
@@ -117,8 +133,7 @@ julia> attractiveness(ix2, lat, lon; aggregator = sum, calculate_attractiveness 
 (parking = 13.200370032301507,)
 ```
 Note that for this code to work we needed to provide the way the attractiveness is calculated with the respect of metadata a (now an empty `struct` as this is NoneMetaPOI).
-
-### OSM map tiling/slicing
+## OSM map tiling/slicing
 
 The native format for OSM files is XML. The files are often huge and for many processing scenarios it might make sense to slice them into smaller portions. That is where this functionality becomes handy.
 
