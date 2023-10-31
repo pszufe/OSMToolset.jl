@@ -2,9 +2,7 @@
 
 ## How to visualize the data
 
-The library can be integrated with various vizualisation frameworks. Below we show two example codes that can be a base for further exploration. The first example uses `folium`  via `PyCall` while the second example uses `Plots.jl` combined with `OpenStreetMapXPlot.jl`.
-
-
+The library can be integrated with various vizualisation frameworks. Below we show two example codes that can be a base for further exploration. The first example uses `folium`  via `PyCall` while the second example uses `Plots.jl` combined with [`OpenStreetMapXPlot.jl`](https://github.com/pszufe/OpenStreetMapXPlot.jl).
 
 ### Point of interest with Python folium via PyCall
 
@@ -47,7 +45,10 @@ The obtained result should be similar to the picture below.
 ![POI Visualization](poiviz.png)
 
 
-### Buidling walkability index and vizualisation with OpenStreetMapX
+### Buidling walkability index and vizualisation with OpenStreetMapXPlot
+
+In this example we download a map from the Overpass API.
+Next,
 
 ```julia
 using Pkg
@@ -60,7 +61,7 @@ using OpenStreetMapX, OpenStreetMapXPlot
 f = download("https://overpass-api.de/api/map?bbox=-71.0912,42.3550,-71.0486,42.3751")
 mv(f, "Boston.osm")
 
-""" Prepares data for plotting for a given map data ams set of POIs """
+""" Prepares data for plotting for a given map data and a set of POIs """
 function getplotdata(md, dfpoi)
 
     # All ENU coordinates should have the same reference point
@@ -68,19 +69,19 @@ function getplotdata(md, dfpoi)
 
     enus = ENU.(LLA.(dfpoi.lat, dfpoi.lon), Ref(refLLA))
     x = getX.(enus)
-    minx, maxx = minimum(x), maximum(x)
+    xmin, xmax = minimum(x), maximum(x)
     y = getY.(enus)
-    miny, maxy = minimum(y), maximum(y)
+    ymin, ymax = minimum(y), maximum(y)
 
 
     # index for efficient spatial queries for nodes
     ixnodes = NodeSpatIndex(md, refLLA; node_range=150.0)
 
     # index for efficient spatial queries for poi availability
-    # pois further than 350m  are not considered
+    # pois requiring a walk beyond 350m are not considered
     ixpoi = AttractivenessSpatIndex{NoneMetaPOI}(dfpoi, refLLA; get_range=a->350, get_group=a->:poi);
 
-    """ Calcylated a distance between a given coordinate and a POI """
+    """ Calculates the distance between a given coordinate and a POI location"""
     function mydistance(enu1, enu2)
         OpenStreetMapX.distance(enu1, enu2) > 700 && return Inf
         dist1, node1 = findnode(ixnodes, LLA(enu1, refLLA))
@@ -91,10 +92,10 @@ function getplotdata(md, dfpoi)
         dist1 + OpenStreetMapX.shortest_route(md, node1, node2)[2] + dist2
     end
 
-
     cellsize = 50  # size of a box in meters
     attdf = DataFrame()
 
+    # In order to speed-up the computations we parallelize this loop (run Julia with the -t paramater)
     lock = Threads.ReentrantLock()
     Threads.@threads for i in 0:round(Int, (xmax - xmin) / cellsize)
         for j in 0:round(Int, (ymax - ymin) / cellsize)
