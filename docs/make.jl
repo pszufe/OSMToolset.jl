@@ -5,13 +5,15 @@ if isfile("src/OSMToolset.jl")
     if !("." in LOAD_PATH)
         push!(LOAD_PATH,".")
     end
-elseif isfile("../src/OSMToolset.jl") 
+elseif isfile("../src/OSMToolset.jl")
     if !(".." in LOAD_PATH)
 	   push!(LOAD_PATH,"..")
     end
 end
 
 using OSMToolset
+
+println("Generating docs for module OSMToolset\n$(pathof(OSMToolset))")
 
 DocMeta.setdocmeta!(OSMToolset, :DocTestSetup, :(using OSMToolset); recursive=true)
 
@@ -35,4 +37,3 @@ deploydocs(
     devbranch = "main",
     target="build"
 )
-

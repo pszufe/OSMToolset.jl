@@ -41,7 +41,7 @@ function FloatLon(x::Float64)
         return reinterpret(FloatLon,x-360.0)
     elseif x < -180.0
         return reinterpret(FloatLon,x+360.0)
-    end 
+    end
     return reinterpret(FloatLon, x)
 end
 FloatLon(x::Integer) = FloatLon(Float64(x))
@@ -56,7 +56,7 @@ import Base: +,-
 """
     A range of geographic coordinates for a map
 """
-@with_kw struct Bounds
+Base.@kwdef struct Bounds
     minlat::Float64 = .0
     minlon::FloatLon = .0
     maxlat::Float64 = .0
@@ -74,18 +74,18 @@ toxmlline(bounds::Bounds) =  """<bounds minlat="$(bounds.minlat)" minlon="$(boun
 """
     A set of bounds for all tiles
 """
-@with_kw struct BoundsTiles
+Base.@kwdef struct BoundsTiles
     bounds::Bounds
     nrow::Int
     ncol::Int
     tilelatwh::Float64 = (bounds.maxlat - bounds.minlat)/nrow
     tilelonwh::Float64 = (bounds.maxlon - bounds.minlon)/ncol
-    tiles::Matrix{Bounds} = [Bounds(bounds.minlat+(row-1)*tilelatwh, bounds.minlon+(col-1)*tilelonwh, 
-                             bounds.minlat+row*tilelatwh, bounds.minlon+col*tilelonwh, tilelatwh, tilelonwh) 
+    tiles::Matrix{Bounds} = [Bounds(bounds.minlat+(row-1)*tilelatwh, bounds.minlon+(col-1)*tilelonwh,
+                             bounds.minlat+row*tilelatwh, bounds.minlon+col*tilelonwh, tilelatwh, tilelonwh)
                              for row in 1:nrow, col in 1:ncol ]
 end
 
-""" 
+"""
     gettile(boundstiles::BoundsTiles, lat, lon)
 
 Returns a `(row, column)` tile identifier for a given `lat` and `lon` coordinates.
@@ -167,7 +167,7 @@ Provide the tiling functionality for maps.
 A `filename` will be open for processing and the tiling will be done around given `bounds`.
 If `bounds` are not given they will be calculated using `getbounds` function.
 The tiling will be performed with a matrix having `nrow` rows and `ncol` columns.
-The output will be written to the folder name `out_dir`.  
+The output will be written to the folder name `out_dir`.
 If none `out_dir` is given than as the output is written to where `filename` is located.
 
 Returns a `Matrix{String}` of size `nrow` x `ncol` containing the names of the files created.
@@ -185,7 +185,7 @@ function tile_osm_file(filename::AbstractString, bounds::Bounds = getbounds(file
     end
     mkpath(joinpath(out_dir))
     boundstiles = BoundsTiles(;bounds, nrow, ncol)
- 
+
     # maps nodeids to Node structs
     nodesDict = Dict{Int,Node}()
 
@@ -201,7 +201,7 @@ function tile_osm_file(filename::AbstractString, bounds::Bounds = getbounds(file
      - nodesDict that maps nodeids to Node structs
      - nodesnn that for each node has a Set of his neighbours
     """
-    
+
     seekstart(io)
     sr = EzXML.StreamReader(io)
     i = 0
@@ -236,21 +236,21 @@ function tile_osm_file(filename::AbstractString, bounds::Bounds = getbounds(file
     flush(stdout)
 
     """
-    2nd File pass. Perform the tiling 
-     This code reads line by line rather than using EzXML because 
+    2nd File pass. Perform the tiling
+     This code reads line by line rather than using EzXML because
      I did not find a method in EzXML to write back XML elements in a convenient way. /TODO/
      Each line is cheked whether it is a <node> or <way> or <relation>
-     a) If a line is a node than gettiles is called. Gettiles finds all tiles for a file on the base 
+     a) If a line is a node than gettiles is called. Gettiles finds all tiles for a file on the base
         of coordinates of the file and all this neighbours.
      b) If a line is a way we started line by line writing it to buffers for all tiles.
         Each <nd> line is checked for gettiles destination and is written to the appropiate tiles
-        If a </way> is found the check for all tile buffer is performed. Those buffers that did not 
+        If a </way> is found the check for all tile buffer is performed. Those buffers that did not
         have a single <nd> line are discarded.
         The non-discarded buffers are written to appropiate files.
-     c) Similarly such as ways the relations are processed. They are also checked for the dependence 
+     c) Similarly such as ways the relations are processed. They are also checked for the dependence
         of ways (as relations can reference both nodes and ways)"
     """
-    
+
 
     iotiles = Matrix{IOStream}(undef, nrow, ncol)
     filenames = Matrix{String}(undef, nrow, ncol)
@@ -340,4 +340,3 @@ function tile_osm_file(filename::AbstractString, bounds::Bounds = getbounds(file
     close(io)
     return filenames
 end
-

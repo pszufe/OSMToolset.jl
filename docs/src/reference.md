@@ -28,10 +28,17 @@ get_attractiveness_group
 clean_pois_by_group
 ```
 
+Efficient searching for nearest nodes in OSM
+--------------------------------------------
+```@docs
+NodeSpatIndex
+findnode
+```
+
 Tiling OSM file
 ------------------
 ```@docs
-calc_tiling(::AbstractString, ::Float64, ::Float64) 
+calc_tiling(::AbstractString, ::Float64, ::Float64)
 calc_tiling(::OSMToolset.Bounds, ::Float64, ::Float64)
 tile_osm_file(::AbstractString, ::Bounds; ::Integer, ::Integer, ::AbstractString)
 Bounds

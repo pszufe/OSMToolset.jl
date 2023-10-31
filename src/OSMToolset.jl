@@ -7,9 +7,8 @@ using StatsBase
 using NamedTupleTools
 using Parsers
 using EzXML
-using Parameters
 import OpenStreetMapX
-import OpenStreetMapX: LLA, ENU, distance
+import OpenStreetMapX: LLA, ENU, distance, MapData, center
 
 
 include("common.jl")
@@ -31,5 +30,7 @@ export AttractivenessMetaPOI
 export sample_osm_file
 export calculate_attractiveness, get_attractiveness_group
 export clean_pois_by_group
+export NodeSpatIndex
+export findnode
 
 end # module OSMToolset
