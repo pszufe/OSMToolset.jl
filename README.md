@@ -6,7 +6,9 @@
 
 `OSMToolset` package provides the tools for efficient extraction of [point-of-interest](https://en.wikipedia.org/wiki/Point_of_interest) from maps and building various custom [walkability](https://en.wikipedia.org/wiki/Walkability) indexes  in [Julia](https://julialang.org/).
 
-**Documentation**:  [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://pszufe.github.io/OSMToolset.jl/dev/) [![Stable](https://img.shields.io/badge/docs-dev-blue.svg)](https://pszufe.github.io/OSMToolset.jl/stable/)
+**Documentation**:  [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://pszufe.github.io/OSMToolset.jl/dev/) 
+
+<!-- [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://pszufe.github.io/OSMToolset.jl/stable/) -->
 
 # Installation
 ```julia
