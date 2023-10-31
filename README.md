@@ -2,7 +2,7 @@
 
 # Tools for manipulation of Open Steet Map data
 
-**Tools for point-of-interest (POI) extraction, walkability/ indexes and tiling of XML map data**
+**Tools for point-of-interest (POI) extraction, walkability/attractiveness indexes and tiling of XML map data**
 
 `OSMToolset` package provides the tools for efficient extraction of [point-of-interest](https://en.wikipedia.org/wiki/Point_of_interest) from maps and building various custom [walkability](https://en.wikipedia.org/wiki/Walkability) indexes  in [Julia](https://julialang.org/).
 
