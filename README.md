@@ -64,7 +64,7 @@ julia> df2 = find_poi(file; scrape_config=ScrapePOIConfig{NoneMetaPOI}(config))
   12 │ way       1052438049  9672086211  42.3624  -71.0878  parking  surface
                                                               10 rows omitted
 ```
-This data can be further processed in many ways. For example [here](TODO) is a sample code that performs vizualisation  
+This data can be further processed in many ways. For example [here](https://pszufe.github.io/OSMToolset.jl/dev/visualize/) is a sample code that performs vizualisation  
 
 ## Spatial attractiveness processing
 
