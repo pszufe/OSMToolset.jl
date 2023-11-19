@@ -140,7 +140,11 @@ function find_poi(filename::AbstractString; scrape_config::ScrapePOIConfig{T}=__
     relations_firstnode = Dict{Int, Node}()
     elemtype = :X
     elemid = -1
-    df= DataFrame()
+	# creates an empty data frame
+	df = DataFrame(;elemtype=Symbol[], elemid=Int[],nodeid=Int[],lat=Float64[],lon=Float64[],
+					key=String[], value=String[], 
+					(NamedTupleTools.fieldnames(T) .=> [Vector{ftype}() for ftype in NamedTupleTools.fieldtypes(T)])...  )
+	
     io = open(filename, "r")
     sr = EzXML.StreamReader(io)
     i = 0

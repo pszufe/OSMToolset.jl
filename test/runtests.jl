@@ -43,11 +43,18 @@ end
 
 config = DataFrame(key=["parking", "amenity"], values=["*", "parking"])
 df2 = find_poi(test_map; scrape_config=ScrapePOIConfig{NoneMetaPOI}(config))
+df3 = find_poi(test_map; scrape_config=ScrapePOIConfig{NoneMetaPOI}(DataFrame(key=String[], values=String[])))
+df4 = find_poi(test_map; scrape_config=ScrapePOIConfig{NoneMetaPOI}(DataFrame(key=["does not exist<!"], values=["*"])))
+
 # each parking space has an attractiveness range od 300 meters
 sindex2 = AttractivenessSpatIndex{NoneMetaPOI}(df2; get_range=a->300, get_group=a->:parking);
 
 @testset "CustomConfig" begin
     @test nrow(df2) > 0
+    @test nrow(df3) == 0
+    @test nrow(df4) == 0
+    @test df2[1:0,:] == df3
+    @test df2[1:0,:] == df4
     @test all(df2.key .∈ Ref(["amenity", "parking"]))
     att2 = attractiveness(sindex2, lla; aggregator= x -> length(x)==0 ? 0 : maximum(x), calculate_attractiveness = (a,dist) -> dist > 300 ? 0 : 300/dist   )
     @test fieldnames(att2) == (:parking,)
