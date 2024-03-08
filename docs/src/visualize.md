@@ -2,26 +2,25 @@
 
 ## How to visualize the data
 
-The library can be integrated with various vizualisation frameworks. Below we show two example codes that can be a base for further exploration. The first example uses `folium`  via `PyCall` while the second example uses `Plots.jl` combined with [`OpenStreetMapXPlot.jl`](https://github.com/pszufe/OpenStreetMapXPlot.jl).
+The library can be integrated with various vizualisation frameworks. Below we show two example codes that can be a base for further exploration. The first example uses `folium`  via `PythonCall` (`using CondaPkg; CondaPkg.add_channel("conda-forge"); CondaPkg.add("folium")`) while the second example uses `Plots.jl` combined with [`OpenStreetMapXPlot.jl`](https://github.com/pszufe/OpenStreetMapXPlot.jl).
+
 
 ### Point of interest with Python folium via PyCall
 
 Below is a sample piece of code that can be used to generate a visualization of POIs on a map.
 ```julia
-using PyCall
-using Colors
-using OSMToolset
+using PythonCall, Colors, OSMToolset
 
 file = sample_osm_file()
 df = find_poi(file)
 ix = AttractivenessSpatIndex(df);
 
-flm = pyimport("folium");
+flm = PythonCall.pyimport("folium");
 
 colrs = distinguishable_colors(length(ix.measures), [RGB(0.1,0.2,0.4)])
 class2col =  Dict(ix.measures .=> colrs);
 
-m = flm.Map(tiles = "Stamen Toner")
+m = flm.Map(tiles = "Cartodb Positron")
 line = 0
 
 for row in eachrow(df)
@@ -34,7 +33,7 @@ for row in eachrow(df)
 
 end
 bb = getbounds(file)
-bounds = [(bb.minlat, Float64(bb.minlon)), (bb.maxlat, Float64(bb.maxlon))]
+bounds = ((bb.minlat, Float64(bb.minlon)), (bb.maxlat, Float64(bb.maxlon)))
 m.fit_bounds(bounds)
 flm.Rectangle(bounds, color="blue",weight=2).add_to(m)
 
