@@ -6,7 +6,7 @@
 
 `OSMToolset` package provides the tools for efficient extraction of [point-of-interest](https://en.wikipedia.org/wiki/Point_of_interest) from maps and building various custom [walkability](https://en.wikipedia.org/wiki/Walkability) indexes  in [Julia](https://julialang.org/).
 
-**Documentation**:  [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://pszufe.github.io/OSMToolset.jl/dev/) 
+**Documentation**:  [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://pszufe.github.io/OSMToolset.jl/dev/)
 <br>
 [![DOI](https://zenodo.org/badge/637564645.svg)](https://zenodo.org/doi/10.5281/zenodo.10016849)
 <!-- [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://pszufe.github.io/OSMToolset.jl/stable/) -->
@@ -53,66 +53,140 @@ julia> df1 = find_poi(file)
                                                               4 columns and 76 rows omitted
 ```
 The default configuration file can be founds in `OSMToolset.__builtin_config_path`. This configuration has meta-data columns that can be seen in results of the parsing process. You could create on base on that your own configuration and use it from scratch.
-```
-myconfig = ScrapePOIConfig{AttractivenessMetaPOI}(OSMToolset.__builtin_config_path)
-df1 = find_poi(file;scrape_config=myconfig)
-```
 
 Suppose that rather you want to configure manually what is scraped. Perhaps we just wanted parking spaces
 that can be either defined in an OSM file as `amenity=parking` or as `parking` key value:
 ```
-julia> config = DataFrame(key=["parking", "amenity"], values=["*", "parking"])
-2×2 DataFrame
- Row │ key      values
-     │ String   String
-─────┼──────────────────
-   1 │ parking  *
-   2 │ amenity  parking
+julia> config = ScrapePOIConfig("parking",("amenity","parking"))
+ScrapePOIConfig{NoneMetaPOI} with 2 keys:
+ No │ key      values
+────┼──────────────────
+  1 │ amenity  parking
+  2 │ parking  *
 ```
-Note that contrary to the previous example this time we do not have meta data columns and hence we will use the `NoneMetaPOI` configuration.
 
+Note that the scraping configuration can be extracted to a data frame by executing `config |> DataFrame`. Such dataframe can also be used to create a new configuration by executing `ScrapePOIConfig{NoneMetaPOI}(DataFrame(key=["amenity","parking"],values=["parking","*"]))`.
+
+Note that since we do not use meta data yet we use parameter: `NoneMetaPOI`.
 Now this can be scraped as :
 ```
-julia> df2 = find_poi(file; scrape_config=ScrapePOIConfig{NoneMetaPOI}(config))
+julia> df2 = find_poi(file, config)
 12×7 DataFrame
  Row │ elemtype  elemid      nodeid      lat      lon       key      value
      │ Symbol    Int64       Int64       Float64  Float64   String   String
 ─────┼───────────────────────────────────────────────────────────────────────
    1 │ way        187565434  1982207088  42.3603  -71.0866  amenity  parking
   ⋮  │    ⋮          ⋮           ⋮          ⋮        ⋮         ⋮        ⋮
-  12 │ way       1052438049  9672086211  42.3624  -71.0878  parking  surface
-                                                              10 rows omitted
+  12 │ way       1052438049  9672086211  42.3624  -71.0878  parking  surface                                                              10 rows omitted
 ```
-This data can be further processed in many ways. For example [here](https://pszufe.github.io/OSMToolset.jl/dev/visualize/) is a sample code that performs POI vizualisation
+
+It is also possible to extract adjacent tags within the same node - this cab be achieved via the `all_tags` option.
+For an example we could get the information on parking place metadata.
+
+```
+find_poi(file, ScrapePOIConfig("parking",("amenity","parking")); all_tags=true)
+25×7 DataFrame
+ Row │ elemtype  elemid      nodeid      lat      lon       key            value
+     │ Symbol    Int64       Int64       Float64  Float64   String         String
+─────┼────────────────────────────────────────────────────────────────────────────────
+   1 │ way        187565434  1982207088  42.3603  -71.0866  amenity        parking
+   2 │ way        187565434  1982207088  42.3603  -71.0866  access         private
+   3 │ way        187565434  1982207088  42.3603  -71.0866  parking        surface
+   4 │ way        187565434  1982207088  42.3603  -71.0866  surface        asphalt
+  ⋮  │    ⋮          ⋮           ⋮          ⋮        ⋮            ⋮            ⋮
+  25 │ way       1052438049  9672086211  42.3624  -71.0878  parking        surface
+                                                                       20 rows omitted
+```
+It can be seen that the same nodeid is repeated for different tags.
+
+The data that we extract can be decorated with additionaly information, such as range and influence of the POI.
+
+```
+julia> config2 = ScrapePOIConfig(("amenity","cafe")=>AttractivenessMetaPOI(:food,1,500), ("amenity","restaurant")=>AttractivenessMetaPOI(:food,2,1000), ("parking",("amenity","parking")) => AttractivenessMetaPOI(:car,1,500))
+ScrapePOIConfig{AttractivenessMetaPOI} with 2 keys:
+ No │ key      values      group  influence  range
+────┼───────────────────────────────────────────────
+  1 │ amenity  cafe        food         1.0   500.0
+  2 │ amenity  restaurant  food         2.0  1000.0
+```
+Here we assume that the importance of restaurant is larger than of cafe and that people are more likely to walk a larger distance to visit a restaurant.
+
+```
+julia> filter!(r->r.nodeid in [1884055322, 11173231405], # select two places
+         find_poi(file, config2, all_tags=true))
+5×10 DataFrame
+ Row │ elemtype  elemid       nodeid       lat      lon       key            value               group    influence  range
+     │ Symbol    Int64        Int64        Float64  Float64   String         String              Symbol?  Float64?   Float64?
+─────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+   1 │ node       1884055322   1884055322  42.3617  -71.09    amenity        cafe                food           1.0      500.0
+   2 │ node       1884055322   1884055322  42.3617  -71.09    name           Forbes Family Cafe  missing  missing    missing
+   3 │ node       1884055322   1884055322  42.3617  -71.09    opening_hours  Mo-Fr 11:00-15:00   missing  missing    missing
+   4 │ node      11173231405  11173231405  42.3622  -71.0864  amenity        cafe                food           1.0      500.0
+   5 │ node      11173231405  11173231405  42.3622  -71.0864  name           Ripple Cafe         missing  missing    missing
+```
+
+
+The data can be further processed in many ways. For example [here](https://pszufe.github.io/OSMToolset.jl/dev/visualize/) is a sample code that performs POI vizualisation
 
 ## Spatial attractiveness processing
 
-Suppose we have the `df1` data from the previous example. Now we can do a spatial attractiveness index in the following way:
+Let's consider a more complex attractiveness information:
 ```
-ix = AttractivenessSpatIndex(df1)
+ config3 = ScrapePOIConfig(("amenity","cafe")=>AttractivenessMetaPOI(:food,1,500), ("amenity","restaurant")=>AttractivenessMetaPOI(:food,2,1000), (["parking",("amenity","parking")] .=> Ref(AttractivenessMetaPOI(:car,1,500)))... )
+ScrapePOIConfig{AttractivenessMetaPOI} with 4 keys:
+ No │ key      values      group  influence  range
+────┼───────────────────────────────────────────────
+  1 │ amenity  cafe        food         1.0   500.0
+  2 │ amenity  parking     car          1.0   500.0
+  3 │ amenity  restaurant  food         2.0  1000.0
+  4 │ parking  *           car          1.0   500.0
 ```
-Note that the default configuration works with the `AttractivenessMetaPOI` data format. If you want a different structure of data for this index you need to crate a subtype of `MetaPOI` and use it in the constructor.
 
-Let us consider some point on the map:
+Note that in this demo we assume attractiveness configuration defined as `AttractivenessMetaPOI`. If you want a different structure of data for this index you need to crate a subtype of `MetaPOI` and use it in the constructor.
+
+We search for such locations:
 ```
-lat, lon = mean(df1.lat), mean(df1.lon)
+julia> df3 = find_poi(file, config3)
+18×10 DataFrame
+ Row │ elemtype  elemid       nodeid       lat      lon       key      value       group   influence  range
+     │ Symbol    Int64        Int64        Float64  Float64   String   String      Symbol  Float64    Float64
+─────┼────────────────────────────────────────────────────────────────────────────────────────────────────────
+   1 │ node       1884054889   1884054889  42.3621  -71.0892  amenity  cafe        food          1.0    500.0
+   2 │ node       1884055322   1884055322  42.3617  -71.09    amenity  cafe        food          1.0    500.0
+  ⋮  │    ⋮           ⋮            ⋮          ⋮        ⋮         ⋮         ⋮         ⋮         ⋮         ⋮
+  17 │ way        1052438049   9672086211  42.3624  -71.0878  amenity  parking     car           1.0    500.0
+  18 │ way        1052438049   9672086211  42.3624  -71.0878  parking  surface     car           1.0    500.0
+                                                                                               14 rows omitted
+```
+
+Now with this data we create a spatial attractiveness index in the following way:
+```
+ix = AttractivenessSpatIndex(df3);
+```
+
+Let us consider a point on the map:
+```
+using Statistics
+lat, lon = mean(df3.lat), mean(df3.lon)
 ```
 We can use the API to calculate attractiveness of that location:
 ```
 julia> attractiveness(ix, lat, lon)
-(education = 42.73746118854219, entertainment = 30.385266049775055, healthcare = 12.491783858701343, leisure = 134.5949900134078, parking = 7.310719949554132, restaurants = 25.200347106553586, shopping = 6.89416203789267, transport = 12.090409181473555)
+(car = 8.595822085195946, food = 5.151440338789913)
 ```
-If, for the debugging purposes, we want to understand what data has been used to calculate that attractiveness use the `explain=true` parameter:
+For this location we can see it is easy to find food and park your car nearby.
+
+If, for some debugging purposes, we want to understand what data has been used to calculate that attractiveness use the `explain=true` parameter:
 ```
-julia> attractiveness(ix, lat, lon ;explain=true).explanation
-68×7 DataFrame
- Row │ group        influence  range    attractiveness  poidistance  lat      lon
-     │ Symbol       Float64    Float64  Float64         Float64      Float64  Float64
-─────┼─────────────────────────────────────────────────────────────────────────────────
-   1 │ education         20.0  10000.0       16.9454       1527.31   42.3553  -71.105
-  ⋮  │      ⋮           ⋮         ⋮           ⋮              ⋮          ⋮        ⋮
-  68 │ shopping           5.0    500.0        0.618922      438.108  42.3625  -71.0834
-                                                                        66 rows omitted
+julia> attractiveness(ix, lat, lon; explain=true)
+(car = 8.595822085195946, food = 5.151440338789913, explanation = 18×7 DataFrame
+ Row │ group   influence  range    attractiveness  poidistance  lat      lon
+     │ Symbol  Float64    Float64  Float64         Float64      Float64  Float64
+─────┼────────────────────────────────────────────────────────────────────────────
+   1 │ food          1.0    500.0        0.183414      408.293  42.3599  -71.0913
+  ⋮  │   ⋮         ⋮         ⋮           ⋮              ⋮          ⋮        ⋮
+  18 │ food          2.0   1000.0        1.44716       276.42   42.3627  -71.084
+                                                                   16 rows omitted)ted
 ```
 The attractiveness function is fully configurable on how the attractiveness is actually calculated.
 The available parameters can be used to define attractiveness dimension, aggreagation function,
@@ -121,19 +195,22 @@ attractivess function and how the distance is on map is calculated.
 Let us for an example take maximum influence values rather than summing them:
 ```
 julia> att = attractiveness(ix, lat, lon, aggregator = x -> length(x)==0 ? 0 : maximum(x))
-(education = 19.245381074958622, entertainment = 17.69295158791498, healthcare = 6.245891929350671, leisure = 4.723681042516024, parking = 2.9623334286775806, restaurants = 4.596901824773207, shopping = 2.0103741801865715, transport = 6.407028429850689)
+(car = 0.8840868352005442, food = 1.747669233262405)
 ```
 
-We could also used the custom scraped `df2` for the attractiveness:
+
+We could also used a DataFrame without meta data columns for the attractiveness:
 ```
-ix2 = AttractivenessSpatIndex{NoneMetaPOI}(df2; get_range=a->300, get_group=a->:parking);
+df4 = find_poi(file, ScrapePOIConfig(("amenity","parking"), "parking"))
+
+ix4 = AttractivenessSpatIndex{NoneMetaPOI}(df4; get_range=a->300, get_group=a->:parking);
 ```
 Note that since we did not have metadata we have manually provided `300` meters for the range and `:parking` for the group.
 
 Now we can use this custom scraper to query the attractiveness:
 ```
-julia> attractiveness(ix2, lat, lon; aggregator = sum, calculate_attractiveness = (a,dist) -> dist > 300 ? 0 : 300/dist )
-(parking = 13.200370032301507,)
+julia> attractiveness(ix4, lat, lon; aggregator = sum, calculate_attractiveness = (a,dist) -> dist > 300 ? 0 : 300/dist )
+(parking = 30.235559263812686,)
 ```
 Note that for this code to work we needed to provide the way the attractiveness is calculated with the respect of metadata a (now an empty `struct` as this is NoneMetaPOI).
 

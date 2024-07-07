@@ -112,8 +112,8 @@ function getplotdata(md, dfpoi)
 end
 
 md = get_map_data("Boston.osm"; use_cache=false, only_intersections=false);
-config = DataFrame(key="amenity", values=["restaurant", "fast_food", "food_court", "pub", "bar", "cafe", "ice_cream"])
-dfpoi = find_poi("Boston.osm"; scrape_config=ScrapePOIConfig{NoneMetaPOI}(config))
+configdf = DataFrame(key="amenity", values=["restaurant", "fast_food", "food_court", "pub", "bar", "cafe", "ice_cream"])
+dfpoi = find_poi("Boston.osm", ScrapePOIConfig{NoneMetaPOI}(configdf))
 
 
 attdf = getplotdata(md, dfpoi)

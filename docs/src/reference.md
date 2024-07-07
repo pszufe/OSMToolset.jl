@@ -13,7 +13,7 @@ Scraping points-of-interest (POI)
 ```@docs
 find_poi
 ScrapePOIConfig
-MetaPOI
+AbstractMetaPOI
 NoneMetaPOI
 AttractivenessMetaPOI
 ```

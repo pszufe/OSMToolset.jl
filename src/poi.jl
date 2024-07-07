@@ -1,26 +1,27 @@
-
 """
-    abstract type MetaPOI end
+    abstract type AbstractMetaPOI end
 
 A base time for representing metadata related to a POI location.
 """
-abstract type MetaPOI end
+abstract type AbstractMetaPOI end
 
 """
-    struct NoneMetaPOI <: MetaPOI; end
+    struct NoneMetaPOI <: AbstractMetaPOI; end
 
-A subtype of `MetaPOI` that does not contain any metadata.
+Scraping configuration when no attractiveness metadata is attached.
 """
-struct NoneMetaPOI <: MetaPOI; end
+struct NoneMetaPOI <: AbstractMetaPOI; end
 """
-    struct AttractivenessMetaPOI <: MetaPOI
+    struct AttractivenessMetaPOI <: AbstractMetaPOI
 
-A subtype of `MetaPOI` that contains metadata for attractiveness 
-(the default configuration of scraping).
-This assumes that the metadata is stored in a CSV file with the following columns:
-`key`, `values`, `group`, `influence`, `range`.
+Container for metadata for attractiveness (the default configuration of scraping).
+
+The attractiveness is defined by the following fields:
+- `group` - the group of the POI (e.g. `:parking` or `:food`)
+- `influence` - the power of the POI on the attractiveness of the location
+- `range` - the range of the POI influence (measeured in meters)
 """
-struct AttractivenessMetaPOI <: MetaPOI
+struct AttractivenessMetaPOI <: AbstractMetaPOI
     group::Symbol
     influence::Float64
     range::Float64
@@ -28,30 +29,30 @@ end
 
 """
     get_attractiveness_group(a::AttractivenessMetaPOI)
-    
+
 Default group for AttractivenessMetaPOI which is `a.group`.
 """
 get_attractiveness_group(a::AttractivenessMetaPOI) = a.group
 
 """
     get_attractiveness_range(a::AttractivenessMetaPOI)
-    
+
 Default range for AttractivenessMetaPOI whic is the `a.range`.
 """
 get_attractiveness_range(a::AttractivenessMetaPOI) = a.range
 
 """
-    get_attractiveness_group(a::NoneMetaPOI) 
-    
+    get_attractiveness_group(a::NoneMetaPOI)
+
 Default group for NoneMetaPOI (`NoneMetaPOI`).
 """
 get_attractiveness_group(a::NoneMetaPOI) = :NoneMetaPOI
 
 """
-    get_attractiveness_range(a::MetaPOI)
-You can create own subtypes of `MetaPOI` but than range needs to be provided.
+    get_attractiveness_range(a::AbstractMetaPOI)
+You can create own subtypes of `AbstractMetaPOI` but than range needs to be provided.
 """
-get_attractiveness_range(a::MetaPOI) = throw(ArgumentError("`get_attractiveness_range` not implemented for type $(typeof(a)). You can also just provide a custom function via the `get_range` parameter such as `get_range= a -> 100`"))
+get_attractiveness_range(a::AbstractMetaPOI) = throw(ArgumentError("`get_attractiveness_range` not implemented for type $(typeof(a)). You can also just provide a custom function via the `get_range` parameter such as `get_range= a -> 100`"))
 
 
 AttractivenessMetaPOI(row::DataFrameRow) = AttractivenessMetaPOI(Symbol(row.group), Float64(row.influence), Float64(row.range))
@@ -68,36 +69,64 @@ The configuration is defined in a DataFrame with the following columns:
 Instead of the DataFrame a paths to a CSV file can be provided.
 
 * Constructors *
-- `ScrapePOIConfig()` - default inbuilt configuration for data scraping. 
+- `ScrapePOIConfig()` - default inbuilt configuration for data scraping.
    Note that the default configuration can change with library updates.
    This will use `AttractivenessMetaPOI` as meta data.
-- `ScrapePOIConfig{T <: MetaPOI}(filename::AbstractString)` - use a CSV file with configuration
-- `ScrapePOIConfig{T <: MetaPOI}(df::DataFrame)` - use a `DataFrame`
+- `ScrapePOIConfig{T <: AbstractMetaPOI}(filename::AbstractString)` - use a CSV file with configuration
+- `ScrapePOIConfig{T <: AbstractMetaPOI}(df::DataFrame)` - use a `DataFrame` as configuration
+- ScrapePOIConfig{T <: AbstractMetaPOI}(meta::Dict{<:Union{String, Tuple{String,String}}, T}) - `meta` dictionary explaining how a single `k="keyname"` value or tuple ofvalues (paired with `v="valuename"`) should be mapped for attractiveness metadata.
+
 
 When the `T` parameter is not provided `AttractivenessMetaPOI` will be used.
 When you do not want to use metadata provide `NoneMetaPOI` as `T`
 """
-struct ScrapePOIConfig{T <: MetaPOI} 
-    dkeys::Set{String}
+struct ScrapePOIConfig{T <: AbstractMetaPOI}
     meta::Dict{Union{String, Tuple{String,String}}, T}
+    dkeys::Set{String} #helper field for efficient searching
 end
 
-"""
-Default built-in configuration for data scraping from OSM XML.
-The default configuration will use AttractivenessMetaPOI
-"""
-const __builtin_config_path = joinpath(@__DIR__, "..", "config", "ScrapePOIconfig.csv")
+
+function ScrapePOIConfig(pairs::Pair{<:Union{Tuple{String,String}, String}, T}...) where T <: AbstractMetaPOI
+    ScrapePOIConfig(Dict{Union{String, Tuple{String,String}}, T}(pairs))
+end
 
 
+function ScrapePOIConfig(keys::Union{Tuple{String,String}, String}...)
+    ScrapePOIConfig(Dict{Union{String, Tuple{String,String}}, NoneMetaPOI}(keys .=> Ref(NoneMetaPOI())))
+end
 
-function ScrapePOIConfig{T}(df::DataFrame) where T <: MetaPOI
+
+function ScrapePOIConfig(meta::Union{Dict{Tuple{String,String}, T},Dict{String, T}}) where T <: AbstractMetaPOI
+    ScrapePOIConfig(Dict{Union{String, Tuple{String,String}}, T}(meta))
+end
+
+function ScrapePOIConfig(meta::Dict{Union{String, Tuple{String,String}}, T}) where T <: AbstractMetaPOI
+    dkeyfirst(k::String) = k
+    dkeyfirst(k::Tuple{String,String}) = k[1]
+    ScrapePOIConfig{T}(meta, Set(dkeyfirst.(keys(meta))))
+end
+
+function DataFrames.DataFrame(sp::ScrapePOIConfig{T}) where T <: AbstractMetaPOI
+    df = DataFrame(;key=String[], values=String[],
+        (NamedTupleTools.fieldnames(T) .=> [Vector{ftype}() for ftype in NamedTupleTools.fieldtypes(T)])...  )
+    for kv in keys(sp.meta)
+        key = kv isa Tuple ? kv[1] : kv
+        values = kv isa Tuple ? kv[2] : "*"
+        push!(df, (;key, values, ntfromstruct(sp.meta[kv])...))
+    end
+    df2 = combine(groupby(df, Not(:values)), :values => (val -> join(sort(val), ",")) => :values)
+    DataFrames.select!(df2, :key, :values,Not([:key, :values]))
+    sort!(df2, [:key, :values])
+    df2
+end
+
+
+function ScrapePOIConfig{T}(df::DataFrame) where T <: AbstractMetaPOI
     colnames = ["key", "values"]
     @assert all(colnames .∈ Ref(names(df)))
-
-    dkeys = Set(String.(df.key))
     meta = Dict{Union{String, Tuple{String,String}}, T}()
     for row in eachrow(df)
-        a = T(row)  
+        a = T(row)
         for value in string.(split(String(row.values),','))
             if value == "*"
                 meta[String(row.key)] = a
@@ -106,22 +135,31 @@ function ScrapePOIConfig{T}(df::DataFrame) where T <: MetaPOI
             end
         end
     end
-    ScrapePOIConfig{T}(dkeys, meta)
+    ScrapePOIConfig(meta)
 end
 
 ScrapePOIConfig(df::DataFrame) = ScrapePOIConfig{AttractivenessMetaPOI}(df)
 
-function ScrapePOIConfig{T}(filename::AbstractString = __builtin_config_path) where T <: MetaPOI
-    ScrapePOIConfig{T}(CSV.read(filename, DataFrame,types=Dict(
-        :key => String, :values =>String) ))
+
+ScrapePOIConfig() = ScrapePOIConfig{AttractivenessMetaPOI}(CSV.read(__builtin_config_path, DataFrame ))
+
+function Base.show(io::IO, sp::ScrapePOIConfig{T}) where T <: AbstractMetaPOI
+    println(io, "ScrapePOIConfig{$T} with $(length(sp.meta)) keys:")
+    show(io, DataFrame(sp);summary=false,eltypes=false,allrows=true,rowlabel=:No)
 end
 
-ScrapePOIConfig(filename::AbstractString = __builtin_config_path) = ScrapePOIConfig{AttractivenessMetaPOI}(filename)
 
-const __builtin_poiconfig = ScrapePOIConfig()
 
 """
-    find_poi(filename::AbstractString; scrape_config::ScrapePOIConfig{T <: MetaPOI}=__builtin_poiconfig)
+Default built-in configuration for data scraping from OSM XML.
+The default configuration will use AttractivenessMetaPOI
+"""
+const __builtin_config_path = joinpath(@__DIR__, "..", "config", "ScrapePOIconfig.csv")
+const __builtin_poiconfig = ScrapePOIConfig()
+
+
+"""
+    find_poi(filename::AbstractString, scrape_config::ScrapePOIConfig{T <: AbstractMetaPOI}=__builtin_poiconfig; all_tags::Bool=false)
 
 Generates a `DataFrame` with points of interests and from a given XML `filename`.
 The data frame will also contain the metadata from `T` for each POI.
@@ -130,9 +168,13 @@ The `DataFrame` can be later used with `AttractivenessSpatIndex` to build an att
 
 The attractiveness values for the index will be used ones from the `scrape_config` file.
 By default `__builtin_poiconfig` from `__builtin_config_path` will be used but you can define your own index.
+
+Setting the `all_tags` parameter to `true` will cause that once the tag is matched, other tags within the same
+`id` will be included in the resulting DataFrame.
 """
-function find_poi(filename::AbstractString; scrape_config::ScrapePOIConfig{T}=__builtin_poiconfig) where T <: MetaPOI
+function find_poi(filename::AbstractString, scrape_config::ScrapePOIConfig{T}=__builtin_poiconfig; all_tags::Bool=false) where T <: AbstractMetaPOI
     dkeys = scrape_config.dkeys
+    dkeys_has_star = ("*" in dkeys)
     meta = scrape_config.meta
     EMPTY_NODE = Node(0,0.,0.)
     nodes =  Dict{Int,Node}()
@@ -140,11 +182,17 @@ function find_poi(filename::AbstractString; scrape_config::ScrapePOIConfig{T}=__
     relations_firstnode = Dict{Int, Node}()
     elemtype = :X
     elemid = -1
+
+    # Buffer for collecting state when all_tags==true
+    all_tags_buffer::Vector{Tuple{String,String}} = Vector{Tuple{String,String}}()
+    all_tags_good_tag::Base.RefValue{Bool} = Ref(false)
+    alltags_clear = all_tags ? () -> begin;empty!(all_tags_buffer);all_tags_good_tag[]=false;end : ()->nothing
+
 	# creates an empty data frame
 	df = DataFrame(;elemtype=Symbol[], elemid=Int[],nodeid=Int[],lat=Float64[],lon=Float64[],
-					key=String[], value=String[], 
-					(NamedTupleTools.fieldnames(T) .=> [Vector{ftype}() for ftype in NamedTupleTools.fieldtypes(T)])...  )
-	
+					key=String[], value=String[],
+					(NamedTupleTools.fieldnames(T) .=> [Vector{Union{ftype, all_tags ? Missing : ftype}}() for ftype in NamedTupleTools.fieldtypes(T)])...  )
+
     io = open(filename, "r")
     sr = EzXML.StreamReader(io)
     i = 0
@@ -160,11 +208,12 @@ function find_poi(filename::AbstractString; scrape_config::ScrapePOIConfig{T}=__
             if hasnodeattributes(sr)
                 attrs = nodeattributes(sr)
                 elemid = parse(Int, attrs["id"])
-                curnode = Node(elemid, parse(Float64,attrs["lat"]), parse(Float64,attrs["lon"])) 
+                curnode = Node(elemid, parse(Float64,attrs["lat"]), parse(Float64,attrs["lon"]))
                 nodes[elemid] = curnode
             else
                 @warn "<node> $nname, $i, no attribs?"
             end
+            alltags_clear()
         elseif nname == "way"
             elemtype = :way
             curnode = EMPTY_NODE
@@ -175,6 +224,7 @@ function find_poi(filename::AbstractString; scrape_config::ScrapePOIConfig{T}=__
             else
                 @warn "<way> $nname, $i, no attribs?"
             end
+            alltags_clear()
         elseif waylookforfirstnd && nname == "nd"
             if hasnodeattributes(sr)
                 attrs = nodeattributes(sr)
@@ -184,6 +234,7 @@ function find_poi(filename::AbstractString; scrape_config::ScrapePOIConfig{T}=__
             else
                 @warn "<way>/<nd> $nname, $i, no attribs?"
             end
+            alltags_clear()
         elseif nname == "relation"
             elemtype = :relation
             curnode = EMPTY_NODE
@@ -195,6 +246,7 @@ function find_poi(filename::AbstractString; scrape_config::ScrapePOIConfig{T}=__
             else
                 @warn "<relation> $nname, $i, no attribs?"
             end
+            alltags_clear()
         elseif relationlookforfirstmember && nname == "member"
             if hasnodeattributes(sr)
                 attrs = nodeattributes(sr)
@@ -218,30 +270,46 @@ function find_poi(filename::AbstractString; scrape_config::ScrapePOIConfig{T}=__
             else
                 @warn "<relation>/<member> $nname, $i, no attribs?"
             end
+            alltags_clear()
         elseif nname == "tag"
             attrs = nodeattributes(sr)
             key = string(get(attrs,"k",""))
+            keysearch::Union{String,Nothing} = nothing
             if key in dkeys
+                keysearch = key
+            elseif dkeys_has_star
+                keysearch = "*"
+            end
+            if !isnothing(keysearch)
                 value = string(get(attrs,"v",""))
                 # get either first key if it was of * type
                 # otherwise try to get attractiveness for the tuple
-                a = get(meta, key, get(meta, (key, value), nothing))
+                a = get(meta, keysearch, get(meta, (keysearch, value), nothing))
                 if !isnothing(a)
                     # we are interested only in attractive POIs
                     push!(df, (;elemtype,elemid,nodeid=curnode.id, lat=curnode.lat, lon=curnode.lon, key, value, ntfromstruct(a)...) )
+                    all_tags_good_tag[] = true
                 end
+            elseif all_tags
+                push!(all_tags_buffer, (key, string(get(attrs,"v",""))))
+            end
+            if all_tags_good_tag[]
+                for (key, value) in all_tags_buffer
+                    push!(df, (;elemtype,elemid,nodeid=curnode.id, lat=curnode.lat, lon=curnode.lon, key, value, (NamedTupleTools.fieldnames(T) .=>missing)...) )
+                end
+                empty!(all_tags_buffer)
             end
         end
     end
     unique!(df,[:lat,:lon,:key,:value])
     df
 end
-    
+
 """
     clean_pois_by_group(df::DataFrame)
 For data imported via AttractivenessMetaPOI the function will return only the most attractive POI for each group.
 This is useful when you want to remove duplicate entries for the same node.
-"""    
+"""
 function clean_pois_by_group(df::DataFrame)
     DataFrame(g[findmax(g.influence)[2], :] for g in  groupby(df, [:nodeid, :group]))
 end
@@ -249,12 +317,12 @@ end
 
 #=
 """
-    find_poi(osm::OpenStreetMapX.OSMData; scrape_config::ScrapePOIConfig=__builtin_poiconfig)
+    find_poi(osm::OpenStreetMapX.OSMData,scrape_config::ScrapePOIConfig=__builtin_poiconfig)
 Finds POIs on the data from OSM parser. Please note that the OSM parser might not parse all the data from the XML file,
 hence the results might be different than from `find_poi(filename::AbstractString)`.
 Generally, usage of `find_poi(filename::AbstractString)` is stronlgy recommended.
 """
-function find_poi(osm::OpenStreetMapX.OSMData; scrape_config::ScrapePOIConfig=__builtin_poiconfig)
+function find_poi(osm::OpenStreetMapX.OSMData,scrape_config::ScrapePOIConfig=__builtin_poiconfig)
     dkeys = scrape_config.dkeys
     meta = scrape_config.meta
 

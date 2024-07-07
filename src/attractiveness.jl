@@ -3,19 +3,19 @@
 
 Internal data structure used to store data in the `AttractivenessSpatIndex` spatial index.
 """
-struct AttractivenessData{T <: MetaPOI}
+struct AttractivenessData{T <: AbstractMetaPOI}
     data::T
     enu::ENU
     lla::LLA
 end
 
-AttractivenessData{T}(row::DataFrameRow, enu, lla) where T <: MetaPOI =
+AttractivenessData{T}(row::DataFrameRow, enu, lla) where T <: AbstractMetaPOI =
     AttractivenessData(T(row), enu, lla)
 AttractivenessData{NoneMetaPOI}(::DataFrameRow, enu, lla) =
     AttractivenessData(NoneMetaPOI(), enu, lla)
 
 
-struct AttractivenessSpatIndex{T <: MetaPOI, F <: Function}
+struct AttractivenessSpatIndex{T <: AbstractMetaPOI, F <: Function}
     tree::RTree{Float64, 2, SpatialElem{Float64, 2, Int64, AttractivenessData{T}}}
     df::DataFrame
     refLLA::LLA
@@ -30,8 +30,8 @@ struct NodeSpatIndex
 end
 
 """
-    AttractivenessSpatIndex{T <: MetaPOI}(filename::AbstractString, get_range::Function=get_attractiveness_range, get_group::Function=get_attractiveness_group)
-    AttractivenessSpatIndex{T <: MetaPOI}(df::AbstractDataFrame, get_range::Function=get_attractiveness_range, get_group::Function=get_attractiveness_group)
+    AttractivenessSpatIndex{T <: AbstractMetaPOI}(filename::AbstractString, get_range::Function=get_attractiveness_range, get_group::Function=get_attractiveness_group)
+    AttractivenessSpatIndex{T <: AbstractMetaPOI}(df::AbstractDataFrame, get_range::Function=get_attractiveness_range, get_group::Function=get_attractiveness_group)
 
 Builds an attractivness spatial index basing on data in some CSV file or a DataFrame
 
@@ -50,11 +50,11 @@ If `T` is not provided `AttractivenessMetaPOI` will be used as the default metad
 
 The type `F` represents the attractiveness group function provided as  `get_group = (a::T) -> :somegroup`.
 """
-AttractivenessSpatIndex{T}(filename::AbstractString;get_range::Function=get_attractiveness_range, get_group::Function=get_attractiveness_group) where T <: MetaPOI = AttractivenessSpatIndex(CSV.read(filename, DataFrame);get_range,get_group)
+AttractivenessSpatIndex{T}(filename::AbstractString;get_range::Function=get_attractiveness_range, get_group::Function=get_attractiveness_group) where T <: AbstractMetaPOI = AttractivenessSpatIndex(CSV.read(filename, DataFrame);get_range,get_group)
 AttractivenessSpatIndex(filename::AbstractString;get_range::Function=get_attractiveness_range, get_group::Function=get_attractiveness_group) = AttractivenessSpatIndex{AttractivenessMetaPOI}(filename::AbstractString;get_range,get_group)
 AttractivenessSpatIndex(df::AbstractDataFrame, refLLA::LLA = LLA(mean(df.lat), mean(df.lon));get_range::Function=get_attractiveness_range, get_group::Function=get_attractiveness_group) = AttractivenessSpatIndex{AttractivenessMetaPOI}(df, refLLA;get_range, get_group)
 
-function AttractivenessSpatIndex{T}(df::AbstractDataFrame, refLLA::LLA = LLA(mean(df.lat), mean(df.lon));get_range::Function=get_attractiveness_range, get_group::Function=get_attractiveness_group) where T <: MetaPOI
+function AttractivenessSpatIndex{T}(df::AbstractDataFrame, refLLA::LLA = LLA(mean(df.lat), mean(df.lon));get_range::Function=get_attractiveness_range, get_group::Function=get_attractiveness_group) where T <: AbstractMetaPOI
     data = SpatialElem{Float64, 2, Int64, AttractivenessData{T}}[]
     groups = Symbol[]
     id = 0
@@ -170,7 +170,7 @@ end
 
 
 """
-    attractiveness(sindex::AttractivenessSpatIndex{T}, lattitude::Number, longitude::Number; aggregator::Function=sum, calculate_attractiveness::Function=calculate_attractiveness,  distance::Function=OpenStreetMapX.distance, explain::Bool=false)  where T <: MetaPOI
+    attractiveness(sindex::AttractivenessSpatIndex{T}, lattitude::Number, longitude::Number; aggregator::Function=sum, calculate_attractiveness::Function=calculate_attractiveness,  distance::Function=OpenStreetMapX.distance, explain::Bool=false)  where T <: AbstractMetaPOI
 
 Returns the multidimensional attractiveness measure
 for the given spatial index `sindex` and `lattitude` and `longitude`.
@@ -185,12 +185,12 @@ calculate the distance between point pairs.
 If `explain` is set to true the result will additionally contain details
 about POIs used to calculate the attractiveness.
 """
-function attractiveness(sindex::AttractivenessSpatIndex{T}, lattitude::Number, longitude::Number; aggregator::Function=sum, calculate_attractiveness::Function=calculate_attractiveness, distance::Function=OpenStreetMapX.distance, explain::Bool=false)  where T <: MetaPOI
+function attractiveness(sindex::AttractivenessSpatIndex{T}, lattitude::Number, longitude::Number; aggregator::Function=sum, calculate_attractiveness::Function=calculate_attractiveness, distance::Function=OpenStreetMapX.distance, explain::Bool=false)  where T <: AbstractMetaPOI
     attractiveness(sindex, OpenStreetMapX.LLA(lattitude,longitude); aggregator, calculate_attractiveness, distance, explain)
 end
 
 """
-    attractiveness(sindex::AttractivenessSpatIndex{T}, lla::LLA; aggregator::Function=sum, calculate_attractiveness::Function=calculate_attractiveness, distance::Function=OpenStreetMapX.distance, explain::Bool=false) where T <: MetaPOI
+    attractiveness(sindex::AttractivenessSpatIndex{T}, lla::LLA; aggregator::Function=sum, calculate_attractiveness::Function=calculate_attractiveness, distance::Function=OpenStreetMapX.distance, explain::Bool=false) where T <: AbstractMetaPOI
 
 Returns the multidimensional attractiveness measure
 for the given spatial index `sindex` and `LLA` coordinates.
@@ -205,7 +205,7 @@ calculate the distance between point pairs.
 If `explain` is set to true the result will additionally contain details
 about POIs used to calculate the attractiveness.
 """
-function attractiveness(sindex::AttractivenessSpatIndex{T}, lla::LLA; aggregator::Function=sum, calculate_attractiveness::Function=calculate_attractiveness, distance::Function=OpenStreetMapX.distance, explain::Bool=false) where T <: MetaPOI
+function attractiveness(sindex::AttractivenessSpatIndex{T}, lla::LLA; aggregator::Function=sum, calculate_attractiveness::Function=calculate_attractiveness, distance::Function=OpenStreetMapX.distance, explain::Bool=false) where T <: AbstractMetaPOI
     enu = ENU(lla,sindex.refLLA)
     attractiveness(sindex, enu; aggregator, calculate_attractiveness, distance, explain)
 end
@@ -213,7 +213,7 @@ end
 
 
 """
-    attractiveness(sindex::AttractivenessSpatIndex{T}, enu::ENU; aggregator::Function=sum, calculate_attractiveness::Function=calculate_attractiveness, distance::Function=OpenStreetMapX.distance, explain::Bool=false) where T <: MetaPOI
+    attractiveness(sindex::AttractivenessSpatIndex{T}, enu::ENU; aggregator::Function=sum, calculate_attractiveness::Function=calculate_attractiveness, distance::Function=OpenStreetMapX.distance, explain::Bool=false) where T <: AbstractMetaPOI
 
 Returns the multidimensional attractiveness measure
 for the given spatial index `sindex` and `enu` cooridanates.
@@ -230,7 +230,7 @@ calculate the distance between point pairs.
 If `explain` is set to true the result will additionally contain details
 about POIs used to calculate the attractiveness.
 """
-function attractiveness(sindex::AttractivenessSpatIndex{T}, enu::ENU; aggregator::Function=sum, calculate_attractiveness::Function=calculate_attractiveness, distance::Function=OpenStreetMapX.distance, explain::Bool=false) where T <: MetaPOI
+function attractiveness(sindex::AttractivenessSpatIndex{T}, enu::ENU; aggregator::Function=sum, calculate_attractiveness::Function=calculate_attractiveness, distance::Function=OpenStreetMapX.distance, explain::Bool=false) where T <: AbstractMetaPOI
     res = Dict(sindex.measures .=> [Float64[] for _ in 1:length(sindex.measures)])
     p = SpatialIndexing.Point((enu.east, enu.north))
     explanation = DataFrame()

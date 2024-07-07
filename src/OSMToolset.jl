@@ -7,6 +7,7 @@ using StatsBase
 using NamedTupleTools
 using Parsers
 using EzXML
+import DataFrames: DataFrame
 import OpenStreetMapX
 import OpenStreetMapX: LLA, ENU, distance, MapData, center
 
@@ -24,7 +25,7 @@ export find_poi
 export calc_tiling
 export getbounds, Bounds
 export ScrapePOIConfig
-export MetaPOI
+export AbstractMetaPOI
 export NoneMetaPOI
 export AttractivenessMetaPOI
 export sample_osm_file
