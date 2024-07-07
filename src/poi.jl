@@ -1,7 +1,7 @@
 """
     abstract type AbstractMetaPOI end
 
-A base time for representing metadata related to a POI location.
+A base type for representing metadata related to a POI location.
 """
 abstract type AbstractMetaPOI end
 
@@ -50,6 +50,7 @@ get_attractiveness_group(a::NoneMetaPOI) = :NoneMetaPOI
 
 """
     get_attractiveness_range(a::AbstractMetaPOI)
+
 You can create own subtypes of `AbstractMetaPOI` but than range needs to be provided.
 """
 get_attractiveness_range(a::AbstractMetaPOI) = throw(ArgumentError("`get_attractiveness_range` not implemented for type $(typeof(a)). You can also just provide a custom function via the `get_range` parameter such as `get_range= a -> 100`"))
@@ -68,17 +69,26 @@ The configuration is defined in a DataFrame with the following columns:
 `group`, `key`, `values`, `influence`, `range`.
 Instead of the DataFrame a paths to a CSV file can be provided.
 
-* Constructors *
+### Constructors
 - `ScrapePOIConfig()` - default inbuilt configuration for data scraping.
    Note that the default configuration can change with library updates.
-   This will use `AttractivenessMetaPOI` as meta data.
-- `ScrapePOIConfig{T <: AbstractMetaPOI}(filename::AbstractString)` - use a CSV file with configuration
+   This will use a default configuration and `AttractivenessMetaPOI` as meta data.
+- `ScrapePOIConfig(keys::Union{Tuple{String,String}, String}...)` - provide keys for scraping, `NoneMetaPOI` will be used as metadata
+- `ScrapePOIConfig(pairs::Pair{<:Union{Tuple{String,String}, String}, T}...)` - provide keys and corresponding metadata
 - `ScrapePOIConfig{T <: AbstractMetaPOI}(df::DataFrame)` - use a `DataFrame` as configuration
-- ScrapePOIConfig{T <: AbstractMetaPOI}(meta::Dict{<:Union{String, Tuple{String,String}}, T}) - `meta` dictionary explaining how a single `k="keyname"` value or tuple ofvalues (paired with `v="valuename"`) should be mapped for attractiveness metadata.
+- ScrapePOIConfig{T <: AbstractMetaPOI}(meta::Dict{<:Union{String, Tuple{String,String}}, T}) - internal constructor. `meta` dictionary explaining how a single `k="keyname"` value or tuple ofvalues (paired with `v="valuename"`) should be mapped for attractiveness metadata.
 
+### Example
+```julia
+ScrapePOIConfig(("amenity", "parking"), ("parking"))
 
-When the `T` parameter is not provided `AttractivenessMetaPOI` will be used.
-When you do not want to use metadata provide `NoneMetaPOI` as `T`
+ScrapePOIConfig(("*", "restaurant"))
+
+ScrapePOIConfig("*")
+
+ScrapePOIConfig(("amenity", "parking") =>AttractivenessMetaPOI(:car, 1, 500), ("amenity", "restaurant") => (AttractivenessMetaPOI(:food, 1.0, 1000.0)))
+
+ScrapePOIConfig([("amenity", "pub"), ("amenity", "restaurant")] .=> Ref(AttractivenessMetaPOI(:food, 1.0, 100.0)))
 """
 struct ScrapePOIConfig{T <: AbstractMetaPOI}
     meta::Dict{Union{String, Tuple{String,String}}, T}
@@ -90,10 +100,19 @@ function ScrapePOIConfig(pairs::Pair{<:Union{Tuple{String,String}, String}, T}..
     ScrapePOIConfig(Dict{Union{String, Tuple{String,String}}, T}(pairs))
 end
 
+function ScrapePOIConfig(pairs::AbstractVector{<:Pair{<:Union{Tuple{String,String}, String}, T}}) where T <: AbstractMetaPOI
+    ScrapePOIConfig(Dict{Union{String, Tuple{String,String}}, T}(pairs))
+end
+
 
 function ScrapePOIConfig(keys::Union{Tuple{String,String}, String}...)
     ScrapePOIConfig(Dict{Union{String, Tuple{String,String}}, NoneMetaPOI}(keys .=> Ref(NoneMetaPOI())))
 end
+
+function ScrapePOIConfig(keys::AbstractVector{<:Union{Tuple{String,String}, String}})
+    ScrapePOIConfig(Dict{Union{String, Tuple{String,String}}, NoneMetaPOI}(keys .=> Ref(NoneMetaPOI())))
+end
+
 
 
 function ScrapePOIConfig(meta::Union{Dict{Tuple{String,String}, T},Dict{String, T}}) where T <: AbstractMetaPOI
@@ -159,15 +178,13 @@ end
     find_poi(filename::AbstractString, scrape_config::ScrapePOIConfig{T <: AbstractMetaPOI}=ScrapePOIConfig(); all_tags::Bool=false)
 
 Generates a `DataFrame` with points of interests and from a given XML `filename`.
-The data frame will also contain the metadata from `T` for each POI.
+The `scrape_config` parameter defines the configuration of the scraping process.
+The data frame will also contain the metadata of type `T` for each POI.
 
 The `DataFrame` can be later used with `AttractivenessSpatIndex` to build an attractivenss spatial index.
 
-The attractiveness values for the index will be used ones from the `scrape_config` file.
-By default  `__builtin_config_path` will be used but you can define your own index.
-
-Setting the `all_tags` parameter to `true` will cause that once the tag is matched, other tags within the same
-`id` will be included in the resulting DataFrame.
+Setting the `all_tags` parameter to `true` will cause that once the tag is matched, the adjacent tags within the same
+element will be included in the resulting DataFrame.
 """
 function find_poi(filename::AbstractString, scrape_config::ScrapePOIConfig{T}=ScrapePOIConfig(); all_tags::Bool=false) where T <: AbstractMetaPOI
     dkeys = scrape_config.dkeys
