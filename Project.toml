@@ -1,7 +1,7 @@
 name = "OSMToolset"
 uuid = "a1c25ae6-0f93-4b3a-bddf-c248cb99b9fa"
 authors = ["pszufe <pszufe@gmail.com> and contributors"]
-version = "0.2.0"
+version = "0.2.1"
 
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
@@ -11,7 +11,7 @@ NamedTupleTools = "d9ec5142-1e00-5aa0-9d6a-321866360f50"
 OpenStreetMapX = "86cd37e6-c0ff-550b-95fe-21d72c8d4fc9"
 Parsers = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
 SpatialIndexing = "d4ead438-fe20-5cc5-a293-4fd39a41b74c"
-StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [compat]
 CSV = "0.10"
@@ -21,7 +21,7 @@ NamedTupleTools = "0.14"
 OpenStreetMapX = "0.2, 0.3, 0.4"
 Parsers = "2"
 SpatialIndexing = "0.1.5, 0.1.6"
-StatsBase = "0.28, 0.29, 0.30, 0.31, 0.32, 0.33, 0.34"
+Statistics = "1.11"
 julia = "1.6"
 
 [extras]

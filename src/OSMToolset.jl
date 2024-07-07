@@ -3,11 +3,10 @@ module OSMToolset
 using CSV
 using DataFrames
 using SpatialIndexing
-using StatsBase
+using Statistics
 using NamedTupleTools
 using Parsers
 using EzXML
-import DataFrames: DataFrame
 import OpenStreetMapX
 import OpenStreetMapX: LLA, ENU, distance, MapData, center
 

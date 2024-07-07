@@ -141,7 +141,13 @@ end
 ScrapePOIConfig(df::DataFrame) = ScrapePOIConfig{AttractivenessMetaPOI}(df)
 
 
+"""
+Default built-in configuration for data scraping from OSM XML.
+The default configuration will use AttractivenessMetaPOI
+"""
+const __builtin_config_path = joinpath(@__DIR__, "..", "config", "ScrapePOIconfig.csv")
 ScrapePOIConfig() = ScrapePOIConfig{AttractivenessMetaPOI}(CSV.read(__builtin_config_path, DataFrame ))
+
 
 function Base.show(io::IO, sp::ScrapePOIConfig{T}) where T <: AbstractMetaPOI
     println(io, "ScrapePOIConfig{$T} with $(length(sp.meta)) keys:")
@@ -149,17 +155,8 @@ function Base.show(io::IO, sp::ScrapePOIConfig{T}) where T <: AbstractMetaPOI
 end
 
 
-
 """
-Default built-in configuration for data scraping from OSM XML.
-The default configuration will use AttractivenessMetaPOI
-"""
-const __builtin_config_path = joinpath(@__DIR__, "..", "config", "ScrapePOIconfig.csv")
-const __builtin_poiconfig = ScrapePOIConfig()
-
-
-"""
-    find_poi(filename::AbstractString, scrape_config::ScrapePOIConfig{T <: AbstractMetaPOI}=__builtin_poiconfig; all_tags::Bool=false)
+    find_poi(filename::AbstractString, scrape_config::ScrapePOIConfig{T <: AbstractMetaPOI}=ScrapePOIConfig(); all_tags::Bool=false)
 
 Generates a `DataFrame` with points of interests and from a given XML `filename`.
 The data frame will also contain the metadata from `T` for each POI.
@@ -167,12 +164,12 @@ The data frame will also contain the metadata from `T` for each POI.
 The `DataFrame` can be later used with `AttractivenessSpatIndex` to build an attractivenss spatial index.
 
 The attractiveness values for the index will be used ones from the `scrape_config` file.
-By default `__builtin_poiconfig` from `__builtin_config_path` will be used but you can define your own index.
+By default  `__builtin_config_path` will be used but you can define your own index.
 
 Setting the `all_tags` parameter to `true` will cause that once the tag is matched, other tags within the same
 `id` will be included in the resulting DataFrame.
 """
-function find_poi(filename::AbstractString, scrape_config::ScrapePOIConfig{T}=__builtin_poiconfig; all_tags::Bool=false) where T <: AbstractMetaPOI
+function find_poi(filename::AbstractString, scrape_config::ScrapePOIConfig{T}=ScrapePOIConfig(); all_tags::Bool=false) where T <: AbstractMetaPOI
     dkeys = scrape_config.dkeys
     dkeys_has_star = ("*" in dkeys)
     meta = scrape_config.meta
@@ -288,7 +285,9 @@ function find_poi(filename::AbstractString, scrape_config::ScrapePOIConfig{T}=__
                 if !isnothing(a)
                     # we are interested only in attractive POIs
                     push!(df, (;elemtype,elemid,nodeid=curnode.id, lat=curnode.lat, lon=curnode.lon, key, value, ntfromstruct(a)...) )
-                    all_tags_good_tag[] = true
+                    all_tags_good_tag[] = all_tags
+                elseif all_tags
+                    push!(all_tags_buffer, (key, value))
                 end
             elseif all_tags
                 push!(all_tags_buffer, (key, string(get(attrs,"v",""))))
@@ -317,12 +316,12 @@ end
 
 #=
 """
-    find_poi(osm::OpenStreetMapX.OSMData,scrape_config::ScrapePOIConfig=__builtin_poiconfig)
+    find_poi(osm::OpenStreetMapX.OSMData,scrape_config::ScrapePOIConfig=ScrapePOIConfig())
 Finds POIs on the data from OSM parser. Please note that the OSM parser might not parse all the data from the XML file,
 hence the results might be different than from `find_poi(filename::AbstractString)`.
 Generally, usage of `find_poi(filename::AbstractString)` is stronlgy recommended.
 """
-function find_poi(osm::OpenStreetMapX.OSMData,scrape_config::ScrapePOIConfig=__builtin_poiconfig)
+function find_poi(osm::OpenStreetMapX.OSMData,scrape_config::ScrapePOIConfig=ScrapePOIConfig())
     dkeys = scrape_config.dkeys
     meta = scrape_config.meta
 
