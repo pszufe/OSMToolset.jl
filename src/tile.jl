@@ -278,6 +278,9 @@ function tile_osm_file(filename::AbstractString, bounds::Bounds = getbounds(file
 
     while !eof(io)
         line = readline(io)
+        if isempty(line)
+            continue
+        end
         type, subtype, id = gettag(line)
         if type == :node
             curtileset = gettiles(nodesDict[id],boundstiles,nodesnn)
