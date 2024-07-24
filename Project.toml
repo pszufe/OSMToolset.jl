@@ -1,7 +1,7 @@
 name = "OSMToolset"
 uuid = "a1c25ae6-0f93-4b3a-bddf-c248cb99b9fa"
 authors = ["pszufe <pszufe@gmail.com> and contributors"]
-version = "0.2.1"
+version = "0.2.2"
 
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
